@@ -52,37 +52,18 @@ fn find_blank_space(slice: &[u8]) -> Option<usize> {
 }
 
 fn parse_int(data: &[u8], pos_sz: u32) -> Option<(u32, usize)> {
-    if data.len() > 0 {
-        if data[0] == b'-' {
-            let (i, acc) = data[1..]
-                .iter()
-                .take_while(|&&val| val >= b'0' && val <= b'9')
-                .fold((0, 0), |(i, acc), &val| {
-                    (i + 1, acc * 10 + (val - b'0') as u32)
-                });
-            Some((pos_sz - acc, i + 1))
-        } else {
-            if data[0] == b'+' {
-                let (i, acc) = data[1..]
-                    .iter()
-                    .take_while(|&&val| val >= b'0' && val <= b'9')
-                    .fold((0, 0), |(i, acc), &val| {
-                        (i + 1, acc * 10 + (val - b'0') as u32)
-                    });
-                Some((acc - 1, i + 1))
-            } else {
-                let (i, acc) = data
-                    .iter()
-                    .take_while(|&&val| val >= b'0' && val <= b'9')
-                    .fold((0, 0), |(i, acc), &val| {
-                        (i + 1, acc * 10 + (val - b'0') as u32)
-                    });
-                Some((acc - 1, i))
-            }
-        }
-    } else {
-        None
-    }
+    data.get(0).map(|&first_b| {
+        let neg = first_b == b'-';
+        let start = (first_b == b'+' || neg) as usize;
+        let (i, acc) = data[start..]
+            .iter()
+            .take_while(|&&val| val >= b'0' && val <= b'9')
+            .fold((0, 0), |(i, acc), &val| {
+                (i + 1, acc * 10 + (val - b'0') as u32)
+            });
+        let res = if !neg { acc - 1 } else { pos_sz - acc };
+        (res, i + start)
+    })
 }
 
 fn parse_face_pos(
