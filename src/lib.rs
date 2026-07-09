@@ -16,17 +16,17 @@ unsafe fn parse_float3(slice: &[u8]) -> (usize, [Float; 3]) {
         let mut sep = find_blank_space(&slice[start + 2..]).unwrap() + 2;
         let f1 =
             FromStr::from_str(std::str::from_utf8_unchecked(&slice[start..(start + sep)])).unwrap();
-        start = start + sep + 1;
+        start += sep + 1;
         start += slice[start..].iter().position(|&c| c != b' ').unwrap();
         sep = find_blank_space(&slice[start + 2..]).unwrap() + 2;
         let f2 =
             FromStr::from_str(std::str::from_utf8_unchecked(&slice[start..(start + sep)])).unwrap();
-        start = start + sep + 1;
+        start += sep + 1;
         start += slice[start..].iter().position(|&c| c != b' ').unwrap();
         sep = find_blank_or_newline(&slice[start + 2..]).unwrap() + 2;
         let f3 =
             FromStr::from_str(std::str::from_utf8_unchecked(&slice[start..(start + sep)])).unwrap();
-        start = start + sep;
+        start += sep;
         start += slice[start..]
             .iter()
             .position(|&c| c != b' ' && c != b'\r')
@@ -52,12 +52,12 @@ fn find_blank_space(slice: &[u8]) -> Option<usize> {
 }
 
 fn parse_int(data: &[u8], pos_sz: u32) -> Option<(u32, usize)> {
-    data.get(0).map(|&first_b| {
+    data.first().map(|&first_b| {
         let neg = first_b == b'-';
         let start = (first_b == b'+' || neg) as usize;
         let (i, acc) = data[start..]
             .iter()
-            .take_while(|&&val| val >= b'0' && val <= b'9')
+            .take_while(|&val| (b'0'..b'9').contains(val))
             .fold((0, 0), |(i, acc), &val| {
                 (i + 1, acc * 10 + (val - b'0') as u32)
             });
