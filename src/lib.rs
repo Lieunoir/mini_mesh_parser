@@ -13,17 +13,17 @@ unsafe fn parse_float3(slice: &[u8]) -> (usize, [Float; 3]) {
         while slice[start] == b' ' {
             start += 1;
         }
-        let mut sep = find_blank_space(&slice[start..]).unwrap();
+        let mut sep = find_blank_space(&slice[start + 2..]).unwrap() + 2;
         let f1 =
             FromStr::from_str(std::str::from_utf8_unchecked(&slice[start..(start + sep)])).unwrap();
         start = start + sep + 1;
         start += slice[start..].iter().position(|&c| c != b' ').unwrap();
-        sep = find_blank_space(&slice[start..]).unwrap();
+        sep = find_blank_space(&slice[start + 2..]).unwrap() + 2;
         let f2 =
             FromStr::from_str(std::str::from_utf8_unchecked(&slice[start..(start + sep)])).unwrap();
         start = start + sep + 1;
         start += slice[start..].iter().position(|&c| c != b' ').unwrap();
-        sep = find_blank_or_newline(&slice[start..]).unwrap();
+        sep = find_blank_or_newline(&slice[start + 2..]).unwrap() + 2;
         let f3 =
             FromStr::from_str(std::str::from_utf8_unchecked(&slice[start..(start + sep)])).unwrap();
         start = start + sep;
@@ -66,7 +66,7 @@ fn parse_int(data: &[u8], pos_sz: u32) -> Option<(u32, usize)> {
     })
 }
 
-fn parse_face_pos(
+fn parse_face_indices(
     //face_str: SplitAsciiblankspace,
     face_str: &[u8],
     mode: &mut FaceMode,
@@ -77,10 +77,8 @@ fn parse_face_pos(
     let mut i = 0;
     let mut data = face_str;
 
-    let mut off = 0;
-    while data.len() > 0 && data[0] == b' ' {
-        data = &data[1..];
-    }
+    let mut off = data.iter().position(|&c| c != b' ').unwrap();
+
     while let Some((v_i, mut endword)) = parse_int(data, pos_sz) {
         indices.push(v_i);
         i += 1;
@@ -94,9 +92,8 @@ fn parse_face_pos(
             }
         }
 
-        while endword < data.len() && data[endword] == b' ' {
-            endword += 1;
-        }
+        endword += data[endword..].iter().position(|&c| c != b' ').unwrap();
+
         off += endword;
         if data[endword] == b'\r' || data[endword] == b'\n' {
             break;
@@ -190,7 +187,7 @@ where
                         // first estimate that `nf = 2 * nv`
                         indices.reserve(vertices.len() * 2 * 3);
                     }
-                    let off = parse_face_pos(
+                    let off = parse_face_indices(
                         &buf[i + 2..],
                         &mut mode,
                         &mut indices,
