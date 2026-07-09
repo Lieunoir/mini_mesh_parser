@@ -109,12 +109,8 @@ fn parse_face_pos(
     face_str: &[u8],
     mode: &mut FaceMode,
     indices: &mut Vec<u32>,
-    _tex_indices: &mut Vec<u32>,
-    _n_indices: &mut Vec<u32>,
     strides: &mut Vec<u8>,
     pos_sz: u32,
-    _tex_sz: u32,
-    _norm_sz: u32,
 ) -> usize {
     let mut i = 0;
     let mut data = face_str;
@@ -196,8 +192,6 @@ where
     let mut vertices = Vec::new();
     let mut mode = FaceMode::Undetermined;
     let mut indices: Vec<u32> = Vec::new();
-    let mut tex_indices: Vec<u32> = Vec::new();
-    let mut n_indices: Vec<u32> = Vec::new();
     let mut strides: Vec<u8> = Vec::new();
     const BUFFER_SIZE: usize = 65536;
     let mut buf = [0; BUFFER_SIZE];
@@ -238,12 +232,8 @@ where
                         &buf[i + 2..],
                         &mut mode,
                         &mut indices,
-                        &mut tex_indices,
-                        &mut n_indices,
                         &mut strides,
                         vertices.len() as u32,
-                        0,
-                        0,
                     );
                     i += 2 + off;
                 }
