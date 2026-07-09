@@ -54,38 +54,29 @@ fn find_blank_space(slice: &[u8]) -> Option<usize> {
 fn parse_int(data: &[u8], pos_sz: u32) -> Option<(u32, usize)> {
     if data.len() > 0 {
         if data[0] == b'-' {
-            let mut acc = 0;
-            let mut i = 1;
-            for &value in &data[i..] {
-                if value < b'0' || value > b'9' {
-                    break;
-                }
-                i += 1;
-                acc = acc * 10 + (value - b'0') as u32;
-            }
-            Some((pos_sz - acc, i))
+            let (i, acc) = data[1..]
+                .iter()
+                .take_while(|&&val| val >= b'0' && val <= b'9')
+                .fold((0, 0), |(i, acc), &val| {
+                    (i + 1, acc * 10 + (val - b'0') as u32)
+                });
+            Some((pos_sz - acc, i + 1))
         } else {
             if data[0] == b'+' {
-                let mut acc = 0;
-                let mut i = 1;
-                for &value in &data[i..] {
-                    if value < b'0' || value > b'9' {
-                        break;
-                    }
-                    i += 1;
-                    acc = acc * 10 + (value - b'0') as u32;
-                }
-                Some((acc - 1, i))
+                let (i, acc) = data[1..]
+                    .iter()
+                    .take_while(|&&val| val >= b'0' && val <= b'9')
+                    .fold((0, 0), |(i, acc), &val| {
+                        (i + 1, acc * 10 + (val - b'0') as u32)
+                    });
+                Some((acc - 1, i + 1))
             } else {
-                let mut acc = 0;
-                let mut i = 0;
-                for &value in &data[i..] {
-                    if value < b'0' || value > b'9' {
-                        break;
-                    }
-                    i += 1;
-                    acc = acc * 10 + (value - b'0') as u32;
-                }
+                let (i, acc) = data
+                    .iter()
+                    .take_while(|&&val| val >= b'0' && val <= b'9')
+                    .fold((0, 0), |(i, acc), &val| {
+                        (i + 1, acc * 10 + (val - b'0') as u32)
+                    });
                 Some((acc - 1, i))
             }
         }
