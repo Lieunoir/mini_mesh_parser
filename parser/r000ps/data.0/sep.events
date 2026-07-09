@@ -1,0 +1,671 @@
+ERROR: Event TOPDOWN.MEMORY_BOUND_SLOTS discarded since the event is invalid or the device does not exist
+PMU type: Core (core)
+Group 0:
+INST_RETIRED.ANY: event id 2
+CPU_CLK_UNHALTED.THREAD: event id 0
+CPU_CLK_UNHALTED.REF_TSC: event id 1
+TOPDOWN.SLOTS: event id 4
+BACLEARS.ANY: event id 19
+CYCLE_ACTIVITY.CYCLES_L1D_MISS: event id 24
+CYCLE_ACTIVITY.STALLS_L1D_MISS: event id 26
+CYCLE_ACTIVITY.STALLS_L2_MISS: event id 27
+CPU_CLK_UNHALTED.DISTRIBUTED: event id 3
+UOPS_RETIRED.SLOTS: event id 5
+TOPDOWN.SLOTS_P: event id 6
+FP_ARITH_INST_RETIRED.SCALAR_SINGLE: event id 7
+
+CCCR
+reg_type       = 1	event_id       = g	reg_id         = 38f	reg_value      = f000000ff
+reg_type       = 1	event_id       = g	reg_id         = 390	reg_value      = f000000ff
+reg_type       = 1	event_id       = g	reg_id         = 3f1	reg_value      = f000000ff
+reg_type       = 1	event_id       = g	reg_id         = 1d9	reg_value      = 1800
+reg_type       = 1	event_id       = g	reg_id         = 38d	reg_value      = 111100003333
+reg_type       = 1	event_id       = g	reg_id         = 3f2	reg_value      = 3
+reg_type       = 1	event_id       = 19	reg_id         = 186	reg_value      = 4004301e6
+reg_type       = 1	event_id       = 24	reg_id         = 187	reg_value      = 4084308a3
+reg_type       = 1	event_id       = 26	reg_id         = 188	reg_value      = 40c430ca3
+reg_type       = 1	event_id       = 27	reg_id         = 189	reg_value      = 4054305a3
+reg_type       = 1	event_id       = 3	reg_id         = 18a	reg_value      = 4004302ec
+reg_type       = 1	event_id       = 5	reg_id         = 18b	reg_value      = 4004302c2
+reg_type       = 1	event_id       = 6	reg_id         = 18c	reg_value      = 4004301a4
+reg_type       = 1	event_id       = 7	reg_id         = 18d	reg_value      = 4004302c7
+
+ESCR
+reg_type       = 2	event_id       = g	reg_id         = 1c8	reg_value      = 0
+
+DATA
+reg_type       = 4	event_id       = 2	reg_id         = 309	reg_value      = ffffffd853c0
+reg_type       = 4	event_id       = 0	reg_id         = 30a	reg_value      = ffffffd853c0
+reg_type       = 4	event_id       = 1	reg_id         = 30b	reg_value      = ffffffd853c0
+reg_type       = 4	event_id       = 4	reg_id         = 30c	reg_value      = ffffffe17b7d
+reg_type       = 4	event_id       = 19	reg_id         = c1	reg_value      = fffffffe795d
+reg_type       = 4	event_id       = 24	reg_id         = c2	reg_value      = fffffff0bdbd
+reg_type       = 4	event_id       = 26	reg_id         = c3	reg_value      = fffffff0bdbd
+reg_type       = 4	event_id       = 27	reg_id         = c4	reg_value      = fffffff0bdbd
+reg_type       = 4	event_id       = 3	reg_id         = c5	reg_value      = ffffffd853c0
+reg_type       = 4	event_id       = 5	reg_id         = c6	reg_value      = ffffffe17b7d
+reg_type       = 4	event_id       = 6	reg_id         = c7	reg_value      = ffffffe17b7d
+reg_type       = 4	event_id       = 7	reg_id         = c8	reg_value      = ffffffe17b7d
+
+Group 1:
+INST_RETIRED.ANY: event id 2
+CPU_CLK_UNHALTED.THREAD: event id 0
+CPU_CLK_UNHALTED.REF_TSC: event id 1
+TOPDOWN.SLOTS: event id 4
+CYCLE_ACTIVITY.STALLS_L3_MISS: event id 28
+DECODE.LCP: event id 31
+DSB2MITE_SWITCHES.PENALTY_CYCLES: event id 32
+DTLB_LOAD_MISSES.STLB_HIT:cmask=1: event id 33
+FP_ARITH_INST_RETIRED.128B_PACKED_SINGLE: event id 8
+FP_ARITH_INST_RETIRED.256B_PACKED_SINGLE: event id 9
+FP_ARITH_INST_RETIRED.SCALAR_DOUBLE: event id 10
+FP_ARITH_INST_RETIRED.128B_PACKED_DOUBLE: event id 11
+
+CCCR
+reg_type       = 1	event_id       = g	reg_id         = 38f	reg_value      = f000000ff
+reg_type       = 1	event_id       = g	reg_id         = 390	reg_value      = f000000ff
+reg_type       = 1	event_id       = g	reg_id         = 3f1	reg_value      = f000000ff
+reg_type       = 1	event_id       = g	reg_id         = 1d9	reg_value      = 1800
+reg_type       = 1	event_id       = g	reg_id         = 38d	reg_value      = 111100003333
+reg_type       = 1	event_id       = g	reg_id         = 3f2	reg_value      = 3
+reg_type       = 1	event_id       = 28	reg_id         = 186	reg_value      = 4064306a3
+reg_type       = 1	event_id       = 31	reg_id         = 187	reg_value      = 400430187
+reg_type       = 1	event_id       = 32	reg_id         = 188	reg_value      = 4004302ab
+reg_type       = 1	event_id       = 33	reg_id         = 189	reg_value      = 401432008
+reg_type       = 1	event_id       = 8	reg_id         = 18a	reg_value      = 4004308c7
+reg_type       = 1	event_id       = 9	reg_id         = 18b	reg_value      = 4004320c7
+reg_type       = 1	event_id       = 10	reg_id         = 18c	reg_value      = 4004301c7
+reg_type       = 1	event_id       = 11	reg_id         = 18d	reg_value      = 4004304c7
+
+ESCR
+reg_type       = 2	event_id       = g	reg_id         = 1c8	reg_value      = 0
+
+DATA
+reg_type       = 4	event_id       = 2	reg_id         = 309	reg_value      = ffffffd853c0
+reg_type       = 4	event_id       = 0	reg_id         = 30a	reg_value      = ffffffd853c0
+reg_type       = 4	event_id       = 1	reg_id         = 30b	reg_value      = ffffffd853c0
+reg_type       = 4	event_id       = 4	reg_id         = 30c	reg_value      = ffffffe17b7d
+reg_type       = 4	event_id       = 28	reg_id         = c1	reg_value      = fffffff0bdbd
+reg_type       = 4	event_id       = 31	reg_id         = c2	reg_value      = fffffff85ed7
+reg_type       = 4	event_id       = 32	reg_id         = c3	reg_value      = fffffffe795d
+reg_type       = 4	event_id       = 33	reg_id         = c4	reg_value      = fffffffe795d
+reg_type       = 4	event_id       = 8	reg_id         = c5	reg_value      = ffffffe17b7d
+reg_type       = 4	event_id       = 9	reg_id         = c6	reg_value      = ffffffe17b7d
+reg_type       = 4	event_id       = 10	reg_id         = c7	reg_value      = ffffffe17b7d
+reg_type       = 4	event_id       = 11	reg_id         = c8	reg_value      = ffffffe17b7d
+
+Group 2:
+INST_RETIRED.ANY: event id 2
+CPU_CLK_UNHALTED.THREAD: event id 0
+CPU_CLK_UNHALTED.REF_TSC: event id 1
+TOPDOWN.SLOTS: event id 4
+DTLB_LOAD_MISSES.WALK_ACTIVE: event id 34
+DTLB_STORE_MISSES.STLB_HIT:cmask=1: event id 35
+DTLB_STORE_MISSES.WALK_ACTIVE: event id 36
+ICACHE_DATA.STALLS: event id 50
+FP_ARITH_INST_RETIRED.256B_PACKED_DOUBLE: event id 12
+UOPS_EXECUTED.X87: event id 13
+UOPS_EXECUTED.THREAD: event id 14
+FP_ARITH_INST_RETIRED.512B_PACKED_DOUBLE: event id 15
+
+CCCR
+reg_type       = 1	event_id       = g	reg_id         = 38f	reg_value      = f000000ff
+reg_type       = 1	event_id       = g	reg_id         = 390	reg_value      = f000000ff
+reg_type       = 1	event_id       = g	reg_id         = 3f1	reg_value      = f000000ff
+reg_type       = 1	event_id       = g	reg_id         = 1d9	reg_value      = 1800
+reg_type       = 1	event_id       = g	reg_id         = 38d	reg_value      = 111100003333
+reg_type       = 1	event_id       = g	reg_id         = 3f2	reg_value      = 3
+reg_type       = 1	event_id       = 34	reg_id         = 186	reg_value      = 401431008
+reg_type       = 1	event_id       = 35	reg_id         = 187	reg_value      = 401432049
+reg_type       = 1	event_id       = 36	reg_id         = 188	reg_value      = 401431049
+reg_type       = 1	event_id       = 50	reg_id         = 189	reg_value      = 400430480
+reg_type       = 1	event_id       = 12	reg_id         = 18a	reg_value      = 4004310c7
+reg_type       = 1	event_id       = 13	reg_id         = 18b	reg_value      = 4004310b1
+reg_type       = 1	event_id       = 14	reg_id         = 18c	reg_value      = 4004301b1
+reg_type       = 1	event_id       = 15	reg_id         = 18d	reg_value      = 4004340c7
+
+ESCR
+reg_type       = 2	event_id       = g	reg_id         = 1c8	reg_value      = 0
+
+DATA
+reg_type       = 4	event_id       = 2	reg_id         = 309	reg_value      = ffffffd853c0
+reg_type       = 4	event_id       = 0	reg_id         = 30a	reg_value      = ffffffd853c0
+reg_type       = 4	event_id       = 1	reg_id         = 30b	reg_value      = ffffffd853c0
+reg_type       = 4	event_id       = 4	reg_id         = 30c	reg_value      = ffffffe17b7d
+reg_type       = 4	event_id       = 34	reg_id         = c1	reg_value      = fffffffe795d
+reg_type       = 4	event_id       = 35	reg_id         = c2	reg_value      = fffffffe795d
+reg_type       = 4	event_id       = 36	reg_id         = c3	reg_value      = fffffffe795d
+reg_type       = 4	event_id       = 50	reg_id         = c4	reg_value      = fffffff85ed7
+reg_type       = 4	event_id       = 12	reg_id         = c5	reg_value      = ffffffe17b7d
+reg_type       = 4	event_id       = 13	reg_id         = c6	reg_value      = ffffffe17b7d
+reg_type       = 4	event_id       = 14	reg_id         = c7	reg_value      = ffffffe17b7d
+reg_type       = 4	event_id       = 15	reg_id         = c8	reg_value      = ffffffe17b7d
+
+Group 3:
+INST_RETIRED.ANY: event id 2
+CPU_CLK_UNHALTED.THREAD: event id 0
+CPU_CLK_UNHALTED.REF_TSC: event id 1
+TOPDOWN.SLOTS: event id 4
+ICACHE_TAG.STALLS: event id 51
+IDQ.MITE_UOPS: event id 52
+IDQ.MS_SWITCHES: event id 53
+IDQ.MS_UOPS: event id 54
+FP_ARITH_INST_RETIRED.512B_PACKED_SINGLE: event id 16
+ARITH.DIVIDER_ACTIVE: event id 17
+ASSISTS.ANY: event id 18
+BR_INST_RETIRED.ALL_BRANCHES: event id 20
+
+CCCR
+reg_type       = 1	event_id       = g	reg_id         = 38f	reg_value      = f000000ff
+reg_type       = 1	event_id       = g	reg_id         = 390	reg_value      = f000000ff
+reg_type       = 1	event_id       = g	reg_id         = 3f1	reg_value      = f000000ff
+reg_type       = 1	event_id       = g	reg_id         = 1d9	reg_value      = 1800
+reg_type       = 1	event_id       = g	reg_id         = 38d	reg_value      = 111100003333
+reg_type       = 1	event_id       = g	reg_id         = 3f2	reg_value      = 3
+reg_type       = 1	event_id       = 51	reg_id         = 186	reg_value      = 400430483
+reg_type       = 1	event_id       = 52	reg_id         = 187	reg_value      = 400430479
+reg_type       = 1	event_id       = 53	reg_id         = 188	reg_value      = 401473079
+reg_type       = 1	event_id       = 54	reg_id         = 189	reg_value      = 400433079
+reg_type       = 1	event_id       = 16	reg_id         = 18a	reg_value      = 4004380c7
+reg_type       = 1	event_id       = 17	reg_id         = 18b	reg_value      = 401430914
+reg_type       = 1	event_id       = 18	reg_id         = 18c	reg_value      = 4004307c1
+reg_type       = 1	event_id       = 20	reg_id         = 18d	reg_value      = 4004300c4
+
+ESCR
+reg_type       = 2	event_id       = g	reg_id         = 1c8	reg_value      = 0
+
+DATA
+reg_type       = 4	event_id       = 2	reg_id         = 309	reg_value      = ffffffd853c0
+reg_type       = 4	event_id       = 0	reg_id         = 30a	reg_value      = ffffffd853c0
+reg_type       = 4	event_id       = 1	reg_id         = 30b	reg_value      = ffffffd853c0
+reg_type       = 4	event_id       = 4	reg_id         = 30c	reg_value      = ffffffe17b7d
+reg_type       = 4	event_id       = 51	reg_id         = c1	reg_value      = fffffffcf2bd
+reg_type       = 4	event_id       = 52	reg_id         = c2	reg_value      = ffffffe17b7d
+reg_type       = 4	event_id       = 53	reg_id         = c3	reg_value      = fffffffe795d
+reg_type       = 4	event_id       = 54	reg_id         = c4	reg_value      = fffffffe795d
+reg_type       = 4	event_id       = 16	reg_id         = c5	reg_value      = ffffffe17b7d
+reg_type       = 4	event_id       = 17	reg_id         = c6	reg_value      = fffffff0bdbd
+reg_type       = 4	event_id       = 18	reg_id         = c7	reg_value      = fffffffe795d
+reg_type       = 4	event_id       = 20	reg_id         = c8	reg_value      = fffffff9e577
+
+Group 4:
+INST_RETIRED.ANY: event id 2
+CPU_CLK_UNHALTED.THREAD: event id 0
+CPU_CLK_UNHALTED.REF_TSC: event id 1
+TOPDOWN.SLOTS: event id 4
+IDQ.MS_UOPS:cmask=1: event id 55
+L1D_PEND_MISS.FB_FULL: event id 62
+L1D_PEND_MISS.FB_FULL_PERIODS: event id 63
+L1D_PEND_MISS.L2_STALL: event id 64
+BR_INST_RETIRED.NEAR_CALL: event id 21
+BR_MISP_RETIRED.ALL_BRANCHES: event id 22
+CPU_CLK_UNHALTED.THREAD_P: event id 23
+CYCLE_ACTIVITY.CYCLES_MEM_ANY: event id 25
+
+CCCR
+reg_type       = 1	event_id       = g	reg_id         = 38f	reg_value      = f000000ff
+reg_type       = 1	event_id       = g	reg_id         = 390	reg_value      = f000000ff
+reg_type       = 1	event_id       = g	reg_id         = 3f1	reg_value      = f000000ff
+reg_type       = 1	event_id       = g	reg_id         = 1d9	reg_value      = 1800
+reg_type       = 1	event_id       = g	reg_id         = 38d	reg_value      = 111100003333
+reg_type       = 1	event_id       = g	reg_id         = 3f2	reg_value      = 3
+reg_type       = 1	event_id       = 55	reg_id         = 186	reg_value      = 401433079
+reg_type       = 1	event_id       = 62	reg_id         = 187	reg_value      = 400430248
+reg_type       = 1	event_id       = 63	reg_id         = 188	reg_value      = 401470248
+reg_type       = 1	event_id       = 64	reg_id         = 189	reg_value      = 400430448
+reg_type       = 1	event_id       = 21	reg_id         = 18a	reg_value      = 4004302c4
+reg_type       = 1	event_id       = 22	reg_id         = 18b	reg_value      = 4004300c5
+reg_type       = 1	event_id       = 23	reg_id         = 18c	reg_value      = 40043003c
+reg_type       = 1	event_id       = 25	reg_id         = 18d	reg_value      = 4104310a3
+
+ESCR
+reg_type       = 2	event_id       = g	reg_id         = 1c8	reg_value      = 0
+
+DATA
+reg_type       = 4	event_id       = 2	reg_id         = 309	reg_value      = ffffffd853c0
+reg_type       = 4	event_id       = 0	reg_id         = 30a	reg_value      = ffffffd853c0
+reg_type       = 4	event_id       = 1	reg_id         = 30b	reg_value      = ffffffd853c0
+reg_type       = 4	event_id       = 4	reg_id         = 30c	reg_value      = ffffffe17b7d
+reg_type       = 4	event_id       = 55	reg_id         = c1	reg_value      = fffffffe795d
+reg_type       = 4	event_id       = 62	reg_id         = c2	reg_value      = fffffff0bdbd
+reg_type       = 4	event_id       = 63	reg_id         = c3	reg_value      = fffffff0bdbd
+reg_type       = 4	event_id       = 64	reg_id         = c4	reg_value      = fffffff0bdbd
+reg_type       = 4	event_id       = 21	reg_id         = c5	reg_value      = fffffffe7959
+reg_type       = 4	event_id       = 22	reg_id         = c6	reg_value      = ffffffff3c9b
+reg_type       = 4	event_id       = 23	reg_id         = c7	reg_value      = ffffffe17b7d
+reg_type       = 4	event_id       = 25	reg_id         = c8	reg_value      = fffffff0bdbd
+
+Group 5:
+INST_RETIRED.ANY: event id 2
+CPU_CLK_UNHALTED.THREAD: event id 0
+CPU_CLK_UNHALTED.REF_TSC: event id 1
+TOPDOWN.SLOTS: event id 4
+L1D_PEND_MISS.PENDING: event id 65
+L2_RQSTS.ALL_RFO: event id 66
+L2_RQSTS.RFO_HIT: event id 67
+LD_BLOCKS.NO_SR: event id 68
+CYCLE_ACTIVITY.STALLS_MEM_ANY: event id 29
+CYCLE_ACTIVITY.STALLS_TOTAL: event id 30
+EXE_ACTIVITY.1_PORTS_UTIL: event id 37
+EXE_ACTIVITY.2_PORTS_UTIL: event id 38
+
+CCCR
+reg_type       = 1	event_id       = g	reg_id         = 38f	reg_value      = f000000ff
+reg_type       = 1	event_id       = g	reg_id         = 390	reg_value      = f000000ff
+reg_type       = 1	event_id       = g	reg_id         = 3f1	reg_value      = f000000ff
+reg_type       = 1	event_id       = g	reg_id         = 1d9	reg_value      = 1800
+reg_type       = 1	event_id       = g	reg_id         = 38d	reg_value      = 111100003333
+reg_type       = 1	event_id       = g	reg_id         = 3f2	reg_value      = 3
+reg_type       = 1	event_id       = 65	reg_id         = 186	reg_value      = 400430148
+reg_type       = 1	event_id       = 66	reg_id         = 187	reg_value      = 40043e224
+reg_type       = 1	event_id       = 67	reg_id         = 188	reg_value      = 40043c224
+reg_type       = 1	event_id       = 68	reg_id         = 189	reg_value      = 400430803
+reg_type       = 1	event_id       = 29	reg_id         = 18a	reg_value      = 4144314a3
+reg_type       = 1	event_id       = 30	reg_id         = 18b	reg_value      = 4044304a3
+reg_type       = 1	event_id       = 37	reg_id         = 18c	reg_value      = 4004302a6
+reg_type       = 1	event_id       = 38	reg_id         = 18d	reg_value      = 4004304a6
+
+ESCR
+reg_type       = 2	event_id       = g	reg_id         = 1c8	reg_value      = 0
+
+DATA
+reg_type       = 4	event_id       = 2	reg_id         = 309	reg_value      = ffffffd853c0
+reg_type       = 4	event_id       = 0	reg_id         = 30a	reg_value      = ffffffd853c0
+reg_type       = 4	event_id       = 1	reg_id         = 30b	reg_value      = ffffffd853c0
+reg_type       = 4	event_id       = 4	reg_id         = 30c	reg_value      = ffffffe17b7d
+reg_type       = 4	event_id       = 65	reg_id         = c1	reg_value      = fffffff0bdbd
+reg_type       = 4	event_id       = 66	reg_id         = c2	reg_value      = fffffffcf2bd
+reg_type       = 4	event_id       = 67	reg_id         = c3	reg_value      = fffffffcf2bd
+reg_type       = 4	event_id       = 68	reg_id         = c4	reg_value      = fffffffe795d
+reg_type       = 4	event_id       = 29	reg_id         = c5	reg_value      = fffffff0bdbd
+reg_type       = 4	event_id       = 30	reg_id         = c6	reg_value      = fffffff0bdbd
+reg_type       = 4	event_id       = 37	reg_id         = c7	reg_value      = ffffffe17b7d
+reg_type       = 4	event_id       = 38	reg_id         = c8	reg_value      = ffffffe17b7d
+
+Group 6:
+INST_RETIRED.ANY: event id 2
+CPU_CLK_UNHALTED.THREAD: event id 0
+CPU_CLK_UNHALTED.REF_TSC: event id 1
+TOPDOWN.SLOTS: event id 4
+LD_BLOCKS.STORE_FORWARD: event id 69
+LD_BLOCKS_PARTIAL.ADDRESS_ALIAS: event id 70
+MEM_INST_RETIRED.ALL_LOADS: event id 73
+MEM_INST_RETIRED.ALL_STORES: event id 74
+EXE_ACTIVITY.BOUND_ON_STORES: event id 39
+EXE_ACTIVITY.EXE_BOUND_0_PORTS: event id 40
+FP_ARITH_INST_RETIRED.4_FLOPS: event id 41
+FP_ARITH_INST_RETIRED.8_FLOPS: event id 42
+
+CCCR
+reg_type       = 1	event_id       = g	reg_id         = 38f	reg_value      = f000000ff
+reg_type       = 1	event_id       = g	reg_id         = 390	reg_value      = f000000ff
+reg_type       = 1	event_id       = g	reg_id         = 3f1	reg_value      = f000000ff
+reg_type       = 1	event_id       = g	reg_id         = 1d9	reg_value      = 1800
+reg_type       = 1	event_id       = g	reg_id         = 38d	reg_value      = 111100003333
+reg_type       = 1	event_id       = g	reg_id         = 3f2	reg_value      = 3
+reg_type       = 1	event_id       = 69	reg_id         = 186	reg_value      = 400430203
+reg_type       = 1	event_id       = 70	reg_id         = 187	reg_value      = 400430107
+reg_type       = 1	event_id       = 73	reg_id         = 188	reg_value      = 4004381d0
+reg_type       = 1	event_id       = 74	reg_id         = 189	reg_value      = 4004382d0
+reg_type       = 1	event_id       = 39	reg_id         = 18a	reg_value      = 4024340a6
+reg_type       = 1	event_id       = 40	reg_id         = 18b	reg_value      = 4004380a6
+reg_type       = 1	event_id       = 41	reg_id         = 18c	reg_value      = 4004318c7
+reg_type       = 1	event_id       = 42	reg_id         = 18d	reg_value      = 4004360c7
+
+ESCR
+reg_type       = 2	event_id       = g	reg_id         = 1c8	reg_value      = 0
+
+DATA
+reg_type       = 4	event_id       = 2	reg_id         = 309	reg_value      = ffffffd853c0
+reg_type       = 4	event_id       = 0	reg_id         = 30a	reg_value      = ffffffd853c0
+reg_type       = 4	event_id       = 1	reg_id         = 30b	reg_value      = ffffffd853c0
+reg_type       = 4	event_id       = 4	reg_id         = 30c	reg_value      = ffffffe17b7d
+reg_type       = 4	event_id       = 69	reg_id         = c1	reg_value      = fffffffe795d
+reg_type       = 4	event_id       = 70	reg_id         = c2	reg_value      = fffffffe795d
+reg_type       = 4	event_id       = 73	reg_id         = c3	reg_value      = fffffffe795d
+reg_type       = 4	event_id       = 74	reg_id         = c4	reg_value      = fffffffe795d
+reg_type       = 4	event_id       = 39	reg_id         = c5	reg_value      = fffffff0bdbd
+reg_type       = 4	event_id       = 40	reg_id         = c6	reg_value      = fffffff0bdbd
+reg_type       = 4	event_id       = 41	reg_id         = c7	reg_value      = fffffffe795d
+reg_type       = 4	event_id       = 42	reg_id         = c8	reg_value      = fffffffe795d
+
+Group 7:
+INST_RETIRED.ANY: event id 2
+CPU_CLK_UNHALTED.THREAD: event id 0
+CPU_CLK_UNHALTED.REF_TSC: event id 1
+TOPDOWN.SLOTS: event id 4
+MEM_INST_RETIRED.LOCK_LOADS: event id 75
+MEM_INST_RETIRED.SPLIT_LOADS: event id 76
+MEM_INST_RETIRED.SPLIT_STORES: event id 77
+MEM_INST_RETIRED.STLB_MISS_LOADS: event id 78
+FP_ARITH_INST_RETIRED.SCALAR: event id 43
+FP_ARITH_INST_RETIRED.VECTOR: event id 44
+FRONTEND_RETIRED.DSB_MISS: event id 45
+
+CCCR
+reg_type       = 1	event_id       = g	reg_id         = 38f	reg_value      = f0000007f
+reg_type       = 1	event_id       = g	reg_id         = 390	reg_value      = f0000007f
+reg_type       = 1	event_id       = g	reg_id         = 3f1	reg_value      = f0000007f
+reg_type       = 1	event_id       = g	reg_id         = 1d9	reg_value      = 1800
+reg_type       = 1	event_id       = g	reg_id         = 38d	reg_value      = 111100003333
+reg_type       = 1	event_id       = g	reg_id         = 3f2	reg_value      = 3
+reg_type       = 1	event_id       = 75	reg_id         = 186	reg_value      = 4004321d0
+reg_type       = 1	event_id       = 76	reg_id         = 187	reg_value      = 4004341d0
+reg_type       = 1	event_id       = 77	reg_id         = 188	reg_value      = 4004342d0
+reg_type       = 1	event_id       = 78	reg_id         = 189	reg_value      = 4004311d0
+reg_type       = 1	event_id       = 43	reg_id         = 18a	reg_value      = 4004303c7
+reg_type       = 1	event_id       = 44	reg_id         = 18b	reg_value      = 40043fcc7
+reg_type       = 1	event_id       = 45	reg_id         = 18c	reg_value      = 4004301c6
+
+ESCR
+reg_type       = 2	event_id       = 45	reg_id         = 3f7	reg_value      = 11
+reg_type       = 2	event_id       = g	reg_id         = 1c8	reg_value      = 0
+
+DATA
+reg_type       = 4	event_id       = 2	reg_id         = 309	reg_value      = ffffffd853c0
+reg_type       = 4	event_id       = 0	reg_id         = 30a	reg_value      = ffffffd853c0
+reg_type       = 4	event_id       = 1	reg_id         = 30b	reg_value      = ffffffd853c0
+reg_type       = 4	event_id       = 4	reg_id         = 30c	reg_value      = ffffffe17b7d
+reg_type       = 4	event_id       = 75	reg_id         = c1	reg_value      = fffffffe7959
+reg_type       = 4	event_id       = 76	reg_id         = c2	reg_value      = fffffffe795d
+reg_type       = 4	event_id       = 77	reg_id         = c3	reg_value      = fffffffe795d
+reg_type       = 4	event_id       = 78	reg_id         = c4	reg_value      = fffffffe795d
+reg_type       = 4	event_id       = 43	reg_id         = c5	reg_value      = fffffff0bdbd
+reg_type       = 4	event_id       = 44	reg_id         = c6	reg_value      = fffffff0bdbd
+reg_type       = 4	event_id       = 45	reg_id         = c7	reg_value      = fffffffe7959
+
+Group 8:
+INST_RETIRED.ANY: event id 2
+CPU_CLK_UNHALTED.THREAD: event id 0
+CPU_CLK_UNHALTED.REF_TSC: event id 1
+TOPDOWN.SLOTS: event id 4
+MEM_INST_RETIRED.STLB_MISS_STORES: event id 79
+MEM_LOAD_L3_HIT_RETIRED.XSNP_FWD: event id 80
+MEM_LOAD_L3_HIT_RETIRED.XSNP_MISS: event id 81
+MEM_LOAD_L3_HIT_RETIRED.XSNP_NO_FWD: event id 82
+FRONTEND_RETIRED.L2_MISS: event id 46
+
+CCCR
+reg_type       = 1	event_id       = g	reg_id         = 38f	reg_value      = f0000001f
+reg_type       = 1	event_id       = g	reg_id         = 390	reg_value      = f0000001f
+reg_type       = 1	event_id       = g	reg_id         = 3f1	reg_value      = f0000001f
+reg_type       = 1	event_id       = g	reg_id         = 1d9	reg_value      = 1800
+reg_type       = 1	event_id       = g	reg_id         = 38d	reg_value      = 111100003333
+reg_type       = 1	event_id       = g	reg_id         = 3f2	reg_value      = 3
+reg_type       = 1	event_id       = 79	reg_id         = 186	reg_value      = 4004312d0
+reg_type       = 1	event_id       = 80	reg_id         = 187	reg_value      = 4004304d2
+reg_type       = 1	event_id       = 81	reg_id         = 188	reg_value      = 4004301d2
+reg_type       = 1	event_id       = 82	reg_id         = 189	reg_value      = 4004302d2
+reg_type       = 1	event_id       = 46	reg_id         = 18a	reg_value      = 4004301c6
+
+ESCR
+reg_type       = 2	event_id       = 46	reg_id         = 3f7	reg_value      = 13
+reg_type       = 2	event_id       = g	reg_id         = 1c8	reg_value      = 0
+
+DATA
+reg_type       = 4	event_id       = 2	reg_id         = 309	reg_value      = ffffffd853c0
+reg_type       = 4	event_id       = 0	reg_id         = 30a	reg_value      = ffffffd853c0
+reg_type       = 4	event_id       = 1	reg_id         = 30b	reg_value      = ffffffd853c0
+reg_type       = 4	event_id       = 4	reg_id         = 30c	reg_value      = ffffffe17b7d
+reg_type       = 4	event_id       = 79	reg_id         = c1	reg_value      = fffffffe795d
+reg_type       = 4	event_id       = 80	reg_id         = c2	reg_value      = ffffffffb1d5
+reg_type       = 4	event_id       = 81	reg_id         = c3	reg_value      = ffffffffb1d5
+reg_type       = 4	event_id       = 82	reg_id         = c4	reg_value      = ffffffffb1d5
+reg_type       = 4	event_id       = 46	reg_id         = c5	reg_value      = fffffffe7959
+
+Group 9:
+INST_RETIRED.ANY: event id 2
+CPU_CLK_UNHALTED.THREAD: event id 0
+CPU_CLK_UNHALTED.REF_TSC: event id 1
+TOPDOWN.SLOTS: event id 4
+MEM_LOAD_RETIRED.FB_HIT: event id 83
+MEM_LOAD_RETIRED.L1_HIT: event id 84
+MEM_LOAD_RETIRED.L1_MISS: event id 85
+MEM_LOAD_RETIRED.L2_HIT: event id 86
+FRONTEND_RETIRED.LATENCY_GE_16: event id 47
+
+CCCR
+reg_type       = 1	event_id       = g	reg_id         = 38f	reg_value      = f0000001f
+reg_type       = 1	event_id       = g	reg_id         = 390	reg_value      = f0000001f
+reg_type       = 1	event_id       = g	reg_id         = 3f1	reg_value      = f0000001f
+reg_type       = 1	event_id       = g	reg_id         = 1d9	reg_value      = 1800
+reg_type       = 1	event_id       = g	reg_id         = 38d	reg_value      = 111100003333
+reg_type       = 1	event_id       = g	reg_id         = 3f2	reg_value      = 3
+reg_type       = 1	event_id       = 83	reg_id         = 186	reg_value      = 4004340d1
+reg_type       = 1	event_id       = 84	reg_id         = 187	reg_value      = 4004301d1
+reg_type       = 1	event_id       = 85	reg_id         = 188	reg_value      = 4004308d1
+reg_type       = 1	event_id       = 86	reg_id         = 189	reg_value      = 4004302d1
+reg_type       = 1	event_id       = 47	reg_id         = 18a	reg_value      = 4004301c6
+
+ESCR
+reg_type       = 2	event_id       = 47	reg_id         = 3f7	reg_value      = 501006
+reg_type       = 2	event_id       = g	reg_id         = 1c8	reg_value      = 0
+
+DATA
+reg_type       = 4	event_id       = 2	reg_id         = 309	reg_value      = ffffffd853c0
+reg_type       = 4	event_id       = 0	reg_id         = 30a	reg_value      = ffffffd853c0
+reg_type       = 4	event_id       = 1	reg_id         = 30b	reg_value      = ffffffd853c0
+reg_type       = 4	event_id       = 4	reg_id         = 30c	reg_value      = ffffffe17b7d
+reg_type       = 4	event_id       = 83	reg_id         = c1	reg_value      = fffffffe7959
+reg_type       = 4	event_id       = 84	reg_id         = c2	reg_value      = fffffff0bdbd
+reg_type       = 4	event_id       = 85	reg_id         = c3	reg_value      = fffffffcf2bd
+reg_type       = 4	event_id       = 86	reg_id         = c4	reg_value      = fffffffcf2bd
+reg_type       = 4	event_id       = 47	reg_id         = c5	reg_value      = fffffffe7959
+
+Group 10:
+INST_RETIRED.ANY: event id 2
+CPU_CLK_UNHALTED.THREAD: event id 0
+CPU_CLK_UNHALTED.REF_TSC: event id 1
+TOPDOWN.SLOTS: event id 4
+MEM_LOAD_RETIRED.L3_HIT: event id 87
+MEM_LOAD_RETIRED.L3_MISS: event id 88
+OFFCORE_REQUESTS_OUTSTANDING.ALL_DATA_RD:cmask=4: event id 89
+OFFCORE_REQUESTS_OUTSTANDING.CYCLES_WITH_DATA_RD: event id 90
+FRONTEND_RETIRED.LATENCY_GE_4: event id 48
+
+CCCR
+reg_type       = 1	event_id       = g	reg_id         = 38f	reg_value      = f0000001f
+reg_type       = 1	event_id       = g	reg_id         = 390	reg_value      = f0000001f
+reg_type       = 1	event_id       = g	reg_id         = 3f1	reg_value      = f0000001f
+reg_type       = 1	event_id       = g	reg_id         = 1d9	reg_value      = 1800
+reg_type       = 1	event_id       = g	reg_id         = 38d	reg_value      = 111100003333
+reg_type       = 1	event_id       = g	reg_id         = 3f2	reg_value      = 3
+reg_type       = 1	event_id       = 87	reg_id         = 186	reg_value      = 4004304d1
+reg_type       = 1	event_id       = 88	reg_id         = 187	reg_value      = 4004320d1
+reg_type       = 1	event_id       = 89	reg_id         = 188	reg_value      = 404430860
+reg_type       = 1	event_id       = 90	reg_id         = 189	reg_value      = 401430860
+reg_type       = 1	event_id       = 48	reg_id         = 18a	reg_value      = 4004301c6
+
+ESCR
+reg_type       = 2	event_id       = 48	reg_id         = 3f7	reg_value      = 500406
+reg_type       = 2	event_id       = g	reg_id         = 1c8	reg_value      = 0
+
+DATA
+reg_type       = 4	event_id       = 2	reg_id         = 309	reg_value      = ffffffd853c0
+reg_type       = 4	event_id       = 0	reg_id         = 30a	reg_value      = ffffffd853c0
+reg_type       = 4	event_id       = 1	reg_id         = 30b	reg_value      = ffffffd853c0
+reg_type       = 4	event_id       = 4	reg_id         = 30c	reg_value      = ffffffe17b7d
+reg_type       = 4	event_id       = 87	reg_id         = c1	reg_value      = fffffffe794b
+reg_type       = 4	event_id       = 88	reg_id         = c2	reg_value      = ffffffff3c9b
+reg_type       = 4	event_id       = 89	reg_id         = c3	reg_value      = fffffff0bdbd
+reg_type       = 4	event_id       = 90	reg_id         = c4	reg_value      = fffffff0bdbd
+reg_type       = 4	event_id       = 48	reg_id         = c5	reg_value      = fffffffe7959
+
+Group 11:
+INST_RETIRED.ANY: event id 2
+CPU_CLK_UNHALTED.THREAD: event id 0
+CPU_CLK_UNHALTED.REF_TSC: event id 1
+TOPDOWN.SLOTS: event id 4
+OFFCORE_REQUESTS_OUTSTANDING.CYCLES_WITH_DEMAND_RFO: event id 91
+UOPS_DECODED.DEC0: event id 96
+UOPS_DECODED.DEC0:cmask=1: event id 97
+OCR.DEMAND_DATA_RD.L3_HIT.SNOOP_HITM: event id 100
+FRONTEND_RETIRED.STLB_MISS: event id 49
+IDQ_UOPS_NOT_DELIVERED.CORE: event id 56
+IDQ_UOPS_NOT_DELIVERED.CYCLES_0_UOPS_DELIV.CORE: event id 57
+INST_RETIRED.NOP: event id 58
+
+CCCR
+reg_type       = 1	event_id       = g	reg_id         = 38f	reg_value      = f000000ff
+reg_type       = 1	event_id       = g	reg_id         = 390	reg_value      = f000000ff
+reg_type       = 1	event_id       = g	reg_id         = 3f1	reg_value      = f000000ff
+reg_type       = 1	event_id       = g	reg_id         = 1d9	reg_value      = 1800
+reg_type       = 1	event_id       = g	reg_id         = 38d	reg_value      = 111100003333
+reg_type       = 1	event_id       = g	reg_id         = 3f2	reg_value      = 3
+reg_type       = 1	event_id       = 91	reg_id         = 186	reg_value      = 401430460
+reg_type       = 1	event_id       = 96	reg_id         = 187	reg_value      = 400430156
+reg_type       = 1	event_id       = 97	reg_id         = 188	reg_value      = 401430156
+reg_type       = 1	event_id       = 100	reg_id         = 189	reg_value      = 4004301b7
+reg_type       = 1	event_id       = 49	reg_id         = 18a	reg_value      = 4004301c6
+reg_type       = 1	event_id       = 56	reg_id         = 18b	reg_value      = 40043019c
+reg_type       = 1	event_id       = 57	reg_id         = 18c	reg_value      = 40543019c
+reg_type       = 1	event_id       = 58	reg_id         = 18d	reg_value      = 4004302c0
+
+ESCR
+reg_type       = 2	event_id       = 100	reg_id         = 1a6	reg_value      = 10003c0001
+reg_type       = 2	event_id       = 49	reg_id         = 3f7	reg_value      = 15
+reg_type       = 2	event_id       = g	reg_id         = 1c8	reg_value      = 0
+
+DATA
+reg_type       = 4	event_id       = 2	reg_id         = 309	reg_value      = ffffffd853c0
+reg_type       = 4	event_id       = 0	reg_id         = 30a	reg_value      = ffffffd853c0
+reg_type       = 4	event_id       = 1	reg_id         = 30b	reg_value      = ffffffd853c0
+reg_type       = 4	event_id       = 4	reg_id         = 30c	reg_value      = ffffffe17b7d
+reg_type       = 4	event_id       = 91	reg_id         = c1	reg_value      = fffffff0bdbd
+reg_type       = 4	event_id       = 96	reg_id         = c2	reg_value      = fffffff0bdbd
+reg_type       = 4	event_id       = 97	reg_id         = c3	reg_value      = fffffff0bdbd
+reg_type       = 4	event_id       = 100	reg_id         = c4	reg_value      = fffffffe795d
+reg_type       = 4	event_id       = 49	reg_id         = c5	reg_value      = fffffffe7959
+reg_type       = 4	event_id       = 56	reg_id         = c6	reg_value      = fffffff0bdbd
+reg_type       = 4	event_id       = 57	reg_id         = c7	reg_value      = fffffff0bdbd
+reg_type       = 4	event_id       = 58	reg_id         = c8	reg_value      = ffffffe17b7d
+
+Group 12:
+INST_RETIRED.ANY: event id 2
+CPU_CLK_UNHALTED.THREAD: event id 0
+CPU_CLK_UNHALTED.REF_TSC: event id 1
+TOPDOWN.SLOTS: event id 4
+OCR.DEMAND_DATA_RD.L3_HIT.SNOOP_HIT_WITH_FWD: event id 101
+OCR.DEMAND_RFO.L3_HIT.SNOOP_HITM: event id 102
+DTLB_LOAD_MISSES.WALK_COMPLETED_1G: event id 104
+DTLB_LOAD_MISSES.WALK_COMPLETED_2M_4M: event id 105
+INT_MISC.CLEARS_COUNT: event id 59
+INT_MISC.CLEAR_RESTEER_CYCLES: event id 60
+INT_MISC.UOP_DROPPING: event id 61
+MACHINE_CLEARS.COUNT: event id 71
+
+CCCR
+reg_type       = 1	event_id       = g	reg_id         = 38f	reg_value      = f000000ff
+reg_type       = 1	event_id       = g	reg_id         = 390	reg_value      = f000000ff
+reg_type       = 1	event_id       = g	reg_id         = 3f1	reg_value      = f000000ff
+reg_type       = 1	event_id       = g	reg_id         = 1d9	reg_value      = 1800
+reg_type       = 1	event_id       = g	reg_id         = 38d	reg_value      = 111100003333
+reg_type       = 1	event_id       = g	reg_id         = 3f2	reg_value      = 3
+reg_type       = 1	event_id       = 101	reg_id         = 186	reg_value      = 4004301b7
+reg_type       = 1	event_id       = 102	reg_id         = 187	reg_value      = 4004301bb
+reg_type       = 1	event_id       = 104	reg_id         = 188	reg_value      = 400430808
+reg_type       = 1	event_id       = 105	reg_id         = 189	reg_value      = 400430408
+reg_type       = 1	event_id       = 59	reg_id         = 18a	reg_value      = 40147010d
+reg_type       = 1	event_id       = 60	reg_id         = 18b	reg_value      = 40043800d
+reg_type       = 1	event_id       = 61	reg_id         = 18c	reg_value      = 40043100d
+reg_type       = 1	event_id       = 71	reg_id         = 18d	reg_value      = 4014701c3
+
+ESCR
+reg_type       = 2	event_id       = 101	reg_id         = 1a6	reg_value      = 8003c0001
+reg_type       = 2	event_id       = 102	reg_id         = 1a7	reg_value      = 10003c0002
+reg_type       = 2	event_id       = g	reg_id         = 1c8	reg_value      = 0
+
+DATA
+reg_type       = 4	event_id       = 2	reg_id         = 309	reg_value      = ffffffd853c0
+reg_type       = 4	event_id       = 0	reg_id         = 30a	reg_value      = ffffffd853c0
+reg_type       = 4	event_id       = 1	reg_id         = 30b	reg_value      = ffffffd853c0
+reg_type       = 4	event_id       = 4	reg_id         = 30c	reg_value      = ffffffe17b7d
+reg_type       = 4	event_id       = 101	reg_id         = c1	reg_value      = fffffffe795d
+reg_type       = 4	event_id       = 102	reg_id         = c2	reg_value      = fffffffe795d
+reg_type       = 4	event_id       = 104	reg_id         = c3	reg_value      = fffffffe795d
+reg_type       = 4	event_id       = 105	reg_id         = c4	reg_value      = fffffffe795d
+reg_type       = 4	event_id       = 59	reg_id         = c5	reg_value      = fffffff85ed7
+reg_type       = 4	event_id       = 60	reg_id         = c6	reg_value      = fffffff85ed7
+reg_type       = 4	event_id       = 61	reg_id         = c7	reg_value      = fffffff0bdbd
+reg_type       = 4	event_id       = 71	reg_id         = c8	reg_value      = fffffffe795d
+
+Group 13:
+INST_RETIRED.ANY: event id 2
+CPU_CLK_UNHALTED.THREAD: event id 0
+CPU_CLK_UNHALTED.REF_TSC: event id 1
+TOPDOWN.SLOTS: event id 4
+OCR.STREAMING_WR.ANY_RESPONSE: event id 103
+DTLB_LOAD_MISSES.WALK_COMPLETED_4K: event id 106
+DTLB_STORE_MISSES.WALK_COMPLETED_1G: event id 107
+DTLB_STORE_MISSES.WALK_COMPLETED_2M_4M: event id 108
+MACHINE_CLEARS.MEMORY_ORDERING: event id 72
+RESOURCE_STALLS.SCOREBOARD: event id 92
+RS_EVENTS.EMPTY_CYCLES: event id 93
+TOPDOWN.BACKEND_BOUND_SLOTS: event id 94
+
+CCCR
+reg_type       = 1	event_id       = g	reg_id         = 38f	reg_value      = f000000ff
+reg_type       = 1	event_id       = g	reg_id         = 390	reg_value      = f000000ff
+reg_type       = 1	event_id       = g	reg_id         = 3f1	reg_value      = f000000ff
+reg_type       = 1	event_id       = g	reg_id         = 1d9	reg_value      = 1800
+reg_type       = 1	event_id       = g	reg_id         = 38d	reg_value      = 111100003333
+reg_type       = 1	event_id       = g	reg_id         = 3f2	reg_value      = 3
+reg_type       = 1	event_id       = 103	reg_id         = 186	reg_value      = 4004301b7
+reg_type       = 1	event_id       = 106	reg_id         = 187	reg_value      = 400430208
+reg_type       = 1	event_id       = 107	reg_id         = 188	reg_value      = 400430849
+reg_type       = 1	event_id       = 108	reg_id         = 189	reg_value      = 400430449
+reg_type       = 1	event_id       = 72	reg_id         = 18a	reg_value      = 4004302c3
+reg_type       = 1	event_id       = 92	reg_id         = 18b	reg_value      = 4004302a2
+reg_type       = 1	event_id       = 93	reg_id         = 18c	reg_value      = 40043015e
+reg_type       = 1	event_id       = 94	reg_id         = 18d	reg_value      = 4004302a4
+
+ESCR
+reg_type       = 2	event_id       = 103	reg_id         = 1a6	reg_value      = 10800
+reg_type       = 2	event_id       = g	reg_id         = 1c8	reg_value      = 0
+
+DATA
+reg_type       = 4	event_id       = 2	reg_id         = 309	reg_value      = ffffffd853c0
+reg_type       = 4	event_id       = 0	reg_id         = 30a	reg_value      = ffffffd853c0
+reg_type       = 4	event_id       = 1	reg_id         = 30b	reg_value      = ffffffd853c0
+reg_type       = 4	event_id       = 4	reg_id         = 30c	reg_value      = ffffffe17b7d
+reg_type       = 4	event_id       = 103	reg_id         = c1	reg_value      = fffffffe795d
+reg_type       = 4	event_id       = 106	reg_id         = c2	reg_value      = fffffffe795d
+reg_type       = 4	event_id       = 107	reg_id         = c3	reg_value      = fffffffe795d
+reg_type       = 4	event_id       = 108	reg_id         = c4	reg_value      = fffffffe795d
+reg_type       = 4	event_id       = 72	reg_id         = c5	reg_value      = fffffffe795d
+reg_type       = 4	event_id       = 92	reg_id         = c6	reg_value      = fffffffe795d
+reg_type       = 4	event_id       = 93	reg_id         = c7	reg_value      = fffffff0bdbd
+reg_type       = 4	event_id       = 94	reg_id         = c8	reg_value      = ffffff67697d
+
+Group 14:
+INST_RETIRED.ANY: event id 2
+CPU_CLK_UNHALTED.THREAD: event id 0
+CPU_CLK_UNHALTED.REF_TSC: event id 1
+TOPDOWN.SLOTS: event id 4
+DTLB_STORE_MISSES.WALK_COMPLETED_4K: event id 109
+UOPS_EXECUTED.CYCLES_GE_3: event id 98
+UOPS_ISSUED.ANY: event id 99
+
+CCCR
+reg_type       = 1	event_id       = g	reg_id         = 38f	reg_value      = f00000007
+reg_type       = 1	event_id       = g	reg_id         = 390	reg_value      = f00000007
+reg_type       = 1	event_id       = g	reg_id         = 3f1	reg_value      = f00000007
+reg_type       = 1	event_id       = g	reg_id         = 1d9	reg_value      = 1800
+reg_type       = 1	event_id       = g	reg_id         = 38d	reg_value      = 111100003333
+reg_type       = 1	event_id       = g	reg_id         = 3f2	reg_value      = 3
+reg_type       = 1	event_id       = 109	reg_id         = 186	reg_value      = 400430249
+reg_type       = 1	event_id       = 98	reg_id         = 187	reg_value      = 4034301b1
+reg_type       = 1	event_id       = 99	reg_id         = 188	reg_value      = 40043010e
+
+ESCR
+reg_type       = 2	event_id       = g	reg_id         = 1c8	reg_value      = 0
+
+DATA
+reg_type       = 4	event_id       = 2	reg_id         = 309	reg_value      = ffffffd853c0
+reg_type       = 4	event_id       = 0	reg_id         = 30a	reg_value      = ffffffd853c0
+reg_type       = 4	event_id       = 1	reg_id         = 30b	reg_value      = ffffffd853c0
+reg_type       = 4	event_id       = 4	reg_id         = 30c	reg_value      = ffffffe17b7d
+reg_type       = 4	event_id       = 109	reg_id         = c1	reg_value      = fffffffe795d
+reg_type       = 4	event_id       = 98	reg_id         = c2	reg_value      = ffffffe17b7d
+reg_type       = 4	event_id       = 99	reg_id         = c3	reg_value      = ffffffe17b7d
+

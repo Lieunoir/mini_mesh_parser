@@ -13,31 +13,27 @@ unsafe fn parse_float3(slice: &[u8]) -> (usize, [Float; 3]) {
         while slice[start] == b' ' {
             start += 1;
         }
-        let mut sep = find_blank_space_only(&slice[start..]).unwrap();
+        let mut sep = find_blank_space(&slice[start..]).unwrap();
         let f1 =
             FromStr::from_str(std::str::from_utf8_unchecked(&slice[start..(start + sep)])).unwrap();
         start = start + sep + 1;
-        while slice[start] == b' ' {
-            start += 1;
-        }
-        sep = find_blank_space_only(&slice[start..]).unwrap();
+        start += slice[start..].iter().position(|&c| c != b' ').unwrap();
+        sep = find_blank_space(&slice[start..]).unwrap();
         let f2 =
             FromStr::from_str(std::str::from_utf8_unchecked(&slice[start..(start + sep)])).unwrap();
         start = start + sep + 1;
-        while slice[start] == b' ' {
-            start += 1;
-        }
+        start += slice[start..].iter().position(|&c| c != b' ').unwrap();
         sep = find_blank_or_newline(&slice[start..]).unwrap();
         let f3 =
             FromStr::from_str(std::str::from_utf8_unchecked(&slice[start..(start + sep)])).unwrap();
-        let mut off = start + sep;
-        while slice[off] == b' ' || slice[off] == b'\r' {
-            off += 1;
-        }
-
+        start = start + sep;
+        start += slice[start..]
+            .iter()
+            .position(|&c| c != b' ' && c != b'\r')
+            .unwrap();
         let arr: [Float; 3] = [f1, f2, f3];
 
-        (off, arr)
+        (start, arr)
     }
 }
 
@@ -52,12 +48,6 @@ fn find_blank_or_newline(slice: &[u8]) -> Option<usize> {
 }
 
 fn find_blank_space(slice: &[u8]) -> Option<usize> {
-    slice
-        .iter()
-        .position(|&v| v == b' ' || v == b'\n' || v == b'\r')
-}
-
-fn find_blank_space_only(slice: &[u8]) -> Option<usize> {
     slice.iter().position(|&v| v == b' ')
 }
 
@@ -126,7 +116,7 @@ fn parse_face_pos(
             break;
         }
         if data[endword] == b'/' {
-            match find_blank_space(&data[(endword + 1)..]) {
+            match find_blank_or_newline(&data[(endword + 1)..]) {
                 Some(value) => endword += 1 + value,
                 None => break,
             }
@@ -327,14 +317,6 @@ mod tests {
 
     #[test]
     fn test_lens() {
-        let surf = load_obj("/home/lieunoir/meshes/lucy.obj");
-        let f = match &surf.1 {
-            SurfaceIndices::Triangles(t) => t,
-            _ => panic!(),
-        };
-        assert!(surf.0.len() == 14027872);
-        assert!(f.len() == 28055728);
-
         let surf = load_obj("/home/lieunoir/meshes/armadillo.obj");
         let f = match &surf.1 {
             SurfaceIndices::Triangles(t) => t,
@@ -350,5 +332,13 @@ mod tests {
         };
         assert!(surf.0.len() == 5344);
         assert!(f.len() == 10688);
+
+        let surf = load_obj("/home/lieunoir/meshes/lucy.obj");
+        let f = match &surf.1 {
+            SurfaceIndices::Triangles(t) => t,
+            _ => panic!(),
+        };
+        assert!(surf.0.len() == 14027872);
+        assert!(f.len() == 28055728);
     }
 }
