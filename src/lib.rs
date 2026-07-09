@@ -1,0 +1,364 @@
+use std::{
+    fs::File,
+    io::{BufReader, prelude::*},
+    path::Path,
+    str::FromStr,
+};
+
+type Float = f32;
+
+unsafe fn parse_float3(slice: &[u8]) -> (usize, [Float; 3]) {
+    unsafe {
+        let mut start = 0;
+        while slice[start] == b' ' {
+            start += 1;
+        }
+        let mut sep = find_blank_space_only(&slice[start..]).unwrap();
+        let f1 =
+            FromStr::from_str(std::str::from_utf8_unchecked(&slice[start..(start + sep)])).unwrap();
+        start = start + sep + 1;
+        while slice[start] == b' ' {
+            start += 1;
+        }
+        sep = find_blank_space_only(&slice[start..]).unwrap();
+        let f2 =
+            FromStr::from_str(std::str::from_utf8_unchecked(&slice[start..(start + sep)])).unwrap();
+        start = start + sep + 1;
+        while slice[start] == b' ' {
+            start += 1;
+        }
+        sep = find_blank_or_newline(&slice[start..]).unwrap();
+        let f3 =
+            FromStr::from_str(std::str::from_utf8_unchecked(&slice[start..(start + sep)])).unwrap();
+        let mut off = start + sep;
+        while slice[off] == b' ' || slice[off] == b'\r' {
+            off += 1;
+        }
+
+        let arr: [Float; 3] = [f1, f2, f3];
+
+        (off, arr)
+    }
+}
+
+fn find_newline(slice: &[u8]) -> Option<usize> {
+    slice.iter().position(|&v| v == b'\n')
+}
+
+fn find_blank_or_newline(slice: &[u8]) -> Option<usize> {
+    slice
+        .iter()
+        .position(|&v| v == b' ' || v == b'\n' || v == b'\r')
+}
+
+fn find_blank_space(slice: &[u8]) -> Option<usize> {
+    slice
+        .iter()
+        .position(|&v| v == b' ' || v == b'\n' || v == b'\r')
+}
+
+fn find_blank_space_only(slice: &[u8]) -> Option<usize> {
+    slice.iter().position(|&v| v == b' ')
+}
+
+fn parse_int(data: &[u8], pos_sz: u32) -> Option<(u32, usize)> {
+    if data.len() > 0 {
+        if data[0] == b'-' {
+            let mut acc = 0;
+            let mut i = 1;
+            for &value in &data[i..] {
+                if value < b'0' || value > b'9' {
+                    break;
+                }
+                i += 1;
+                acc = acc * 10 + (value - b'0') as u32;
+            }
+            Some((pos_sz - acc, i))
+        } else {
+            if data[0] == b'+' {
+                let mut acc = 0;
+                let mut i = 1;
+                for &value in &data[i..] {
+                    if value < b'0' || value > b'9' {
+                        break;
+                    }
+                    i += 1;
+                    acc = acc * 10 + (value - b'0') as u32;
+                }
+                Some((acc - 1, i))
+            } else {
+                let mut acc = 0;
+                let mut i = 0;
+                for &value in &data[i..] {
+                    if value < b'0' || value > b'9' {
+                        break;
+                    }
+                    i += 1;
+                    acc = acc * 10 + (value - b'0') as u32;
+                }
+                Some((acc - 1, i))
+            }
+        }
+    } else {
+        None
+    }
+}
+
+fn parse_face_pos(
+    //face_str: SplitAsciiblankspace,
+    face_str: &[u8],
+    mode: &mut FaceMode,
+    indices: &mut Vec<u32>,
+    _tex_indices: &mut Vec<u32>,
+    _n_indices: &mut Vec<u32>,
+    strides: &mut Vec<u8>,
+    pos_sz: u32,
+    _tex_sz: u32,
+    _norm_sz: u32,
+) -> usize {
+    let mut i = 0;
+    let mut data = face_str;
+
+    let mut off = 0;
+    while data.len() > 0 && data[0] == b' ' {
+        data = &data[1..];
+    }
+    while let Some((v_i, mut endword)) = parse_int(data, pos_sz) {
+        indices.push(v_i);
+        i += 1;
+        if endword == data.len() {
+            break;
+        }
+        if data[endword] == b'/' {
+            match find_blank_space(&data[(endword + 1)..]) {
+                Some(value) => endword += 1 + value,
+                None => break,
+            }
+        }
+
+        while endword < data.len() && data[endword] == b' ' {
+            endword += 1;
+        }
+        off += endword;
+        if data[endword] == b'\r' || data[endword] == b'\n' {
+            break;
+        }
+        data = &data[endword..];
+    }
+    //if data.len() > 0 {
+    //    let v_i = VertexIndices::parse_pos(data, pos_sz).unwrap();
+    //    indices.push(v_i);
+    //    i += 1;
+    //}
+    if i >= 3 && *mode != FaceMode::Polygon {
+        if *mode == FaceMode::Undetermined {
+            if i == 3 {
+                *mode = FaceMode::Triangle;
+            } else if i == 4 {
+                *mode = FaceMode::Quad;
+            } else {
+                *mode = FaceMode::Polygon;
+            }
+        } else if *mode == FaceMode::Triangle && i != 3 {
+            //add missing strides
+            *strides = vec![3; (indices.len() - i) / 3];
+            strides.reserve(3 * 2 * pos_sz as usize - strides.len());
+            *mode = FaceMode::Polygon;
+        } else if *mode == FaceMode::Quad && i != 4 {
+            //add missing strides
+            *strides = vec![4; (indices.len() - i) / 4];
+            *mode = FaceMode::Polygon;
+            strides.reserve(4 * 2 * pos_sz as usize - strides.len());
+        }
+    }
+    if i >= 3 && *mode == FaceMode::Polygon {
+        strides.push(i as u8);
+    }
+    off
+}
+
+pub fn load_obj(file_name: impl AsRef<Path>) -> (Vec<[Float; 3]>, SurfaceIndices) {
+    let file = match File::open(file_name.as_ref()) {
+        Ok(f) => f,
+        Err(_e) => {
+            panic!()
+            //return Err(LoadError::OpenFileFailed);
+        }
+    };
+    let mut reader = BufReader::new(file);
+    load_obj_buf(&mut reader)
+}
+
+pub fn load_obj_buf<B>(reader: &mut B) -> (Vec<[Float; 3]>, SurfaceIndices)
+where
+    B: BufRead,
+{
+    let mut vertices = Vec::new();
+    let mut mode = FaceMode::Undetermined;
+    let mut indices: Vec<u32> = Vec::new();
+    let mut tex_indices: Vec<u32> = Vec::new();
+    let mut n_indices: Vec<u32> = Vec::new();
+    let mut strides: Vec<u8> = Vec::new();
+    const BUFFER_SIZE: usize = 65536;
+    let mut buf = [0; BUFFER_SIZE];
+    let mut encountered_f = false;
+    let mut start = 0;
+    while let Ok(size) = reader.read(&mut buf[start..]) {
+        if size == 0 && start == 0 {
+            break;
+        }
+        let end = start + size;
+        let mut last = end - 1;
+        while buf[last] != b'\n' && last > 0 {
+            last -= 1;
+        }
+        if buf[last] != b'\n' {
+            break;
+        }
+        last += 1;
+
+        let mut i = 0;
+        while i < last {
+            match buf[i] {
+                b'v' => match buf[i + 1] {
+                    b' ' => {
+                        let (off, pos) = unsafe { parse_float3(&buf[i + 2..]) };
+                        vertices.push(pos);
+                        i += off + 2;
+                    }
+                    _ => i += find_newline(&buf[i + 1..]).unwrap() + 2,
+                },
+                b'f' => {
+                    if !encountered_f {
+                        encountered_f = true;
+                        // first estimate that `nf = 2 * nv`
+                        indices.reserve(vertices.len() * 2 * 3);
+                    }
+                    let off = parse_face_pos(
+                        &buf[i + 2..],
+                        &mut mode,
+                        &mut indices,
+                        &mut tex_indices,
+                        &mut n_indices,
+                        &mut strides,
+                        vertices.len() as u32,
+                        0,
+                        0,
+                    );
+                    i += 2 + off;
+                }
+                _ => i += find_newline(&buf[i..]).unwrap() + 1,
+            }
+        }
+
+        start = end - last;
+        buf.copy_within(last..end, 0);
+    }
+    let indices = if mode == FaceMode::Polygon {
+        (indices, strides).into()
+    } else if mode == FaceMode::Quad {
+        indices
+            .chunks(4)
+            .map(|face| face.try_into().unwrap())
+            .collect::<Vec<[u32; 4]>>()
+            .into()
+    } else {
+        indices
+            .chunks(3)
+            .map(|face| face.try_into().unwrap())
+            .collect::<Vec<[u32; 3]>>()
+            .into()
+    };
+    (vertices, indices)
+}
+
+#[derive(PartialEq)]
+enum FaceMode {
+    Triangle,
+    Quad,
+    Polygon,
+    Undetermined,
+}
+
+impl Into<SurfaceIndices> for Vec<[u32; 3]> {
+    fn into(self) -> SurfaceIndices {
+        SurfaceIndices::Triangles(self)
+    }
+}
+
+impl Into<SurfaceIndices> for Vec<[u32; 4]> {
+    fn into(self) -> SurfaceIndices {
+        SurfaceIndices::Quads(self)
+    }
+}
+
+impl Into<SurfaceIndices> for (Vec<u32>, Vec<u32>) {
+    fn into(self) -> SurfaceIndices {
+        let mut count = 0;
+        let mut faces_indices = self
+            .1
+            .into_iter()
+            .map(|s| {
+                count += s;
+                count - s
+            })
+            .collect::<Vec<_>>();
+        faces_indices.push(count);
+        SurfaceIndices::Polygons(self.0, faces_indices)
+    }
+}
+
+impl Into<SurfaceIndices> for (Vec<u32>, Vec<u8>) {
+    fn into(self) -> SurfaceIndices {
+        let mut count = 0;
+        let mut faces_indices = self
+            .1
+            .into_iter()
+            .map(|s| {
+                count += s as u32;
+                count - s as u32
+            })
+            .collect::<Vec<_>>();
+        faces_indices.push(count);
+        SurfaceIndices::Polygons(self.0, faces_indices)
+    }
+}
+
+pub enum SurfaceIndices {
+    Triangles(Vec<[u32; 3]>),
+    Quads(Vec<[u32; 4]>),
+    Polygons(Vec<u32>, Vec<u32>),
+}
+
+#[cfg(test)]
+mod tests {
+    // Note this useful idiom: importing names from outer (for mod tests) scope.
+    use super::*;
+
+    #[test]
+    fn test_lens() {
+        let surf = load_obj("/home/lieunoir/meshes/lucy.obj");
+        let f = match &surf.1 {
+            SurfaceIndices::Triangles(t) => t,
+            _ => panic!(),
+        };
+        assert!(surf.0.len() == 14027872);
+        assert!(f.len() == 28055728);
+
+        let surf = load_obj("/home/lieunoir/meshes/armadillo.obj");
+        let f = match &surf.1 {
+            SurfaceIndices::Triangles(t) => t,
+            _ => panic!(),
+        };
+        assert!(surf.0.len() == 49990);
+        assert!(f.len() == 99976);
+
+        let surf = load_obj("/home/lieunoir/meshes/bob.obj");
+        let f = match &surf.1 {
+            SurfaceIndices::Triangles(t) => t,
+            _ => panic!(),
+        };
+        assert!(surf.0.len() == 5344);
+        assert!(f.len() == 10688);
+    }
+}
