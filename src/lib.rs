@@ -55,7 +55,7 @@ fn parse_int(data: &[u8], pos_sz: u32) -> Option<(u32, usize)> {
         let start = (first_b == b'+' || neg) as usize;
         let (i, acc) = data[start..]
             .iter()
-            .take_while(|&val| (b'0'..=b'9').contains(val))
+            .take_while(|&val| val.is_ascii_digit())
             .fold((0, 0), |(i, acc), &val| {
                 (i + 1, acc * 10 + (val - b'0') as u32)
             });
@@ -230,19 +230,33 @@ where
     let indices = if mode == FaceMode::Polygon {
         (indices, strides).into()
     } else if mode == FaceMode::Quad {
-        indices
-            .chunks(4)
-            .map(|face| face.try_into().unwrap())
-            .collect::<Vec<[u32; 4]>>()
-            .into()
+        into_chunks::<4>(indices).into()
     } else {
-        indices
-            .chunks(3)
-            .map(|face| face.try_into().unwrap())
-            .collect::<Vec<[u32; 3]>>()
-            .into()
+        into_chunks::<3>(indices).into()
     };
     (vertices, indices)
+}
+
+// Taken from std https://github.com/rust-lang/rust/issues/142137
+pub fn into_chunks<const N: usize>(mut this: Vec<u32>) -> Vec<[u32; N]> {
+    const {
+        assert!(N != 0, "chunk size must be greater than zero");
+    }
+
+    let (len, cap) = (this.len(), this.capacity());
+
+    let len_remainder = len % N;
+    if len_remainder != 0 {
+        this.truncate(len - len_remainder);
+    }
+
+    let cap_remainder = cap % N;
+    if cap_remainder != 0 {
+        this.shrink_to_fit();
+    }
+    let (ptr, _, _) = this.into_raw_parts();
+
+    unsafe { Vec::from_raw_parts(ptr.cast(), len / N, cap / N) }
 }
 
 #[derive(PartialEq)]
