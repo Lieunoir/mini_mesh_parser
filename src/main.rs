@@ -1,4 +1,4 @@
-use mesh_parsers::{SurfaceIndices, load_obj};
+use mesh_parsers::{SurfaceIndices, obj::load_obj};
 fn main() {
     let surf = load_obj("/home/lieunoir/meshes/lucy.obj");
     let f = match &surf.1 {

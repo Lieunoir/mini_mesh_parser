@@ -1,5 +1,5 @@
 use criterion::{Criterion, criterion_group, criterion_main};
-use mesh_parsers::load_obj;
+use mesh_parsers::obj::load_obj;
 
 pub fn parallel(c: &mut Criterion) {
     c.bench_function("Armadillo", |b| {
