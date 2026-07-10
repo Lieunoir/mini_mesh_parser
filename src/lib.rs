@@ -5,9 +5,7 @@ use std::{
     str::FromStr,
 };
 
-type Float = f32;
-
-unsafe fn parse_float3(slice: &[u8]) -> (usize, [Float; 3]) {
+unsafe fn parse_float3(slice: &[u8]) -> (usize, [f32; 3]) {
     unsafe {
         let mut start = 0;
         while slice[start] == b' ' {
@@ -31,7 +29,7 @@ unsafe fn parse_float3(slice: &[u8]) -> (usize, [Float; 3]) {
             .iter()
             .position(|&c| c != b' ' && c != b'\r')
             .unwrap();
-        let arr: [Float; 3] = [f1, f2, f3];
+        let arr: [f32; 3] = [f1, f2, f3];
 
         (start, arr)
     }
@@ -57,7 +55,7 @@ fn parse_int(data: &[u8], pos_sz: u32) -> Option<(u32, usize)> {
         let start = (first_b == b'+' || neg) as usize;
         let (i, acc) = data[start..]
             .iter()
-            .take_while(|&val| (b'0'..b'9').contains(val))
+            .take_while(|&val| (b'0'..=b'9').contains(val))
             .fold((0, 0), |(i, acc), &val| {
                 (i + 1, acc * 10 + (val - b'0') as u32)
             });
@@ -74,10 +72,32 @@ fn parse_face_indices(
     strides: &mut Vec<u8>,
     pos_sz: u32,
 ) -> usize {
-    let mut i = 0;
     let mut data = face_str;
+    let mut off = 0;
 
-    let mut off = data.iter().position(|&c| c != b' ').unwrap();
+    off += data.iter().position(|&c| c != b' ').unwrap();
+    data = &face_str[off..];
+    let (f0, end) = parse_int(data, pos_sz).unwrap();
+    off += end;
+    data = &face_str[off..];
+    off += data.iter().position(|&c| c == b' ').unwrap() + 1;
+    data = &face_str[off..];
+    off += data.iter().position(|&c| c != b' ').unwrap();
+    data = &face_str[off..];
+    let (f1, end) = parse_int(data, pos_sz).unwrap();
+    off += end;
+    data = &face_str[off..];
+    off += data.iter().position(|&c| c == b' ').unwrap() + 1;
+    data = &face_str[off..];
+    off += data.iter().position(|&c| c != b' ').unwrap();
+    data = &face_str[off..];
+    // let (f2, end) = parse_int(data, pos_sz).unwrap();
+    // off += end;
+    // let mut i = 3;
+    let mut i = 2;
+    indices.push(f0);
+    indices.push(f1);
+    // indices.push(f3);
 
     while let Some((v_i, mut endword)) = parse_int(data, pos_sz) {
         indices.push(v_i);
@@ -96,6 +116,10 @@ fn parse_face_indices(
 
         off += endword;
         if data[endword] == b'\r' || data[endword] == b'\n' {
+            off += data[endword..]
+                .iter()
+                .position(|&c| c != b' ' && c != b'\r')
+                .unwrap();
             break;
         }
         data = &data[endword..];
@@ -132,7 +156,7 @@ fn parse_face_indices(
     off
 }
 
-pub fn load_obj(file_name: impl AsRef<Path>) -> (Vec<[Float; 3]>, SurfaceIndices) {
+pub fn load_obj(file_name: impl AsRef<Path>) -> (Vec<[f32; 3]>, SurfaceIndices) {
     let file = match File::open(file_name.as_ref()) {
         Ok(f) => f,
         Err(_e) => {
@@ -144,7 +168,7 @@ pub fn load_obj(file_name: impl AsRef<Path>) -> (Vec<[Float; 3]>, SurfaceIndices
     load_obj_buf(&mut reader)
 }
 
-pub fn load_obj_buf<B>(reader: &mut B) -> (Vec<[Float; 3]>, SurfaceIndices)
+pub fn load_obj_buf<B>(reader: &mut B) -> (Vec<[f32; 3]>, SurfaceIndices)
 where
     B: BufRead,
 {
