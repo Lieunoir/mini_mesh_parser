@@ -2,6 +2,7 @@ use std::str::FromStr;
 
 pub mod obj;
 pub mod off;
+pub mod ply;
 pub mod stl;
 
 unsafe fn parse_float3(slice: &[u8]) -> (usize, [f32; 3]) {

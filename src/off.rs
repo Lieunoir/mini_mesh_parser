@@ -148,7 +148,7 @@ where
             if let Some(line_start) = get_line_start(&buf[i..]) {
                 i += line_start;
                 if line_number == 0 {
-                    if &buf[i..i + 3] == &[b'O', b'F', b'F'] {
+                    if buf.split_first_chunk::<3>().unwrap().0 == b"OFF" {
                         i += find_newline(&buf[3..]).unwrap() + 4;
                         continue;
                     } else {
