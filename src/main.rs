@@ -7,6 +7,8 @@ fn main() {
     //};
     //assert!(surf.0.len() == 14027872);
     //assert!(f.len() == 28055728);
-    load_ply("/home/lieunoir/rust/mesh_parsers/assets/cube1.ply");
-    load_ply("/home/lieunoir/rust/mesh_parsers/assets/cube2.ply");
+    //load_ply("/home/lieunoir/rust/mesh_parsers/assets/cube1.ply");
+    //let f = load_ply("/home/lieunoir/rust/mesh_parsers/assets/cube2.ply");
+    let f = load_ply("/home/lieunoir/meshes/bunny_ply/bun_zipper.ply");
+    println!("{:?}", f.0);
 }

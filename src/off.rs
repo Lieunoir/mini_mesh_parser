@@ -61,12 +61,12 @@ fn parse_face_indices(
             }
         } else if *mode == FaceMode::Triangle && face_len != 3 {
             //add missing strides
-            *strides = vec![3; (indices.len() - face_len as usize) / 3];
+            *strides = vec![3; indices.len() / 3];
             strides.reserve(3 * nf - strides.len());
             *mode = FaceMode::Polygon;
         } else if *mode == FaceMode::Quad && face_len != 4 {
             //add missing strides
-            *strides = vec![4; (indices.len() - face_len as usize) / 4];
+            *strides = vec![4; indices.len() / 4];
             *mode = FaceMode::Polygon;
             strides.reserve(2 * nf - strides.len());
         }

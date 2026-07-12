@@ -1,3 +1,4 @@
+use crate::{FaceMode, SurfaceIndices, find_blank_or_newline, into_chunks};
 use std::{
     fs::File,
     io::{BufReader, prelude::*},
@@ -5,14 +6,13 @@ use std::{
     str::FromStr,
 };
 
-use crate::{SurfaceIndices, ply::Type::Single};
-
 enum Format {
     Ascii,
     BigEndian,
     LittleEndian,
 }
 
+#[derive(Clone, Copy)]
 enum RawType {
     Char,
     UChar,
@@ -24,6 +24,7 @@ enum RawType {
     Double,
 }
 
+#[derive(Clone, Copy)]
 enum Type {
     Single(RawType),
     List(RawType, RawType),
@@ -90,6 +91,24 @@ impl Type {
             _ => None,
         }
     }
+
+    fn skip_ascii(&self, data: &[u8]) -> Option<usize> {
+        match self {
+            Type::Single(_) => data.iter().position(|&c| c == b' '),
+            Type::List(_, _) => {
+                let (n, mut i) = parse_int(data)?;
+                for _ in 0..n {
+                    let mut found = false;
+                    i += data[i..].iter().position(|&c| {
+                        found |= c != b' ';
+                        found && c == b' '
+                    })?;
+                }
+                i += data[i..].iter().position(|&c| c != b' ')?;
+                Some(i)
+            }
+        }
+    }
 }
 
 #[derive(Default)]
@@ -105,26 +124,24 @@ struct HeadingInfos {
     i_stride: Vec<Type>,
 
     v_first_over_f: bool,
-    useless_before_first: Vec<(u32, Vec<Type>)>,
+    useless_before: Vec<(u32, Vec<Type>)>,
     useless_between: Vec<(u32, Vec<Type>)>,
 }
 
-#[derive(Default)]
 struct AsciiInfos {
-    useless_before_first: Vec<(u32, Vec<Type>)>,
+    useless_before: u32,
     vertex_start: u32,
     nv: u32,
     v_x_stride_i: u32,
     v_y_stride_i: u32,
     v_z_stride_i: u32,
-    v_lines: u32,
+    v_stride: Vec<Type>,
     face_start: u32,
     nf: u32,
     i_stride_i: u32,
-    i_stride: u32,
+    i_stride: Vec<Type>,
 }
 
-#[derive(Default)]
 struct BinaryInfos {
     big_endian: bool,
     nv: u32,
@@ -137,11 +154,89 @@ struct BinaryInfos {
     i_stride: Vec<Type>,
 
     v_first_over_f: bool,
-    useless_before_first: Vec<(u32, Vec<Type>)>,
+    useless_before: Vec<(u32, Vec<Type>)>,
     useless_between: Vec<(u32, Vec<Type>)>,
 }
 
-enum HeaderParsingState {
+enum ParsingState {
+    Header(HeadingInfos),
+    Ascii(AsciiInfos),
+    Binary(BinaryInfos),
+}
+
+impl ParsingState {
+    fn new() -> Self {
+        ParsingState::Header(HeadingInfos::default())
+    }
+
+    fn finalize(self) -> Result<Self, ()> {
+        if let ParsingState::Header(infos) = self {
+            let nv = infos.nv;
+            let nf = infos.nf;
+            let v_stride = infos.v_stride;
+            let v_x_stride_i = infos.v_x_stride_i.ok_or(())?;
+            let v_y_stride_i = infos.v_y_stride_i.ok_or(())?;
+            let v_z_stride_i = infos.v_z_stride_i.ok_or(())?;
+            let i_stride = infos.i_stride;
+            let i_stride_i = infos.i_stride_i.ok_or(())?;
+            match infos.format.ok_or(())? {
+                Format::Ascii => {
+                    let useless_before = infos.useless_before.iter().fold(0, |acc, (n, _)| acc + n);
+                    let useless_between =
+                        infos.useless_between.iter().fold(0, |acc, (n, _)| acc + n);
+                    let vertex_start = if infos.v_first_over_f {
+                        useless_before
+                    } else {
+                        useless_before + useless_between + infos.nf
+                    };
+                    let face_start = if !infos.v_first_over_f {
+                        useless_before
+                    } else {
+                        useless_before + useless_between + infos.nv
+                    };
+                    Ok(ParsingState::Ascii(AsciiInfos {
+                        useless_before,
+                        vertex_start,
+                        face_start,
+                        nv,
+                        nf,
+                        v_stride,
+                        v_x_stride_i,
+                        v_y_stride_i,
+                        v_z_stride_i,
+                        i_stride,
+                        i_stride_i,
+                    }))
+                }
+                format @ Format::BigEndian | format @ Format::LittleEndian => {
+                    let big_endian = if let Format::BigEndian = format {
+                        true
+                    } else {
+                        false
+                    };
+                    Ok(ParsingState::Binary(BinaryInfos {
+                        big_endian,
+                        nv,
+                        v_x_stride_i,
+                        v_y_stride_i,
+                        v_z_stride_i,
+                        v_stride,
+                        nf,
+                        i_stride_i,
+                        i_stride,
+                        v_first_over_f: infos.v_first_over_f,
+                        useless_before: infos.useless_before,
+                        useless_between: infos.useless_between,
+                    }))
+                }
+            }
+        } else {
+            Err(())
+        }
+    }
+}
+
+enum HeaderSection {
     Format,
     Vertex,
     Face,
@@ -152,12 +247,13 @@ fn parse_header(
     mut data: &[u8],
     cursor: &mut usize,
     head: &mut HeadingInfos,
-    state: &mut HeaderParsingState,
+    section: &mut HeaderSection,
 ) -> Result<bool, ()> {
     while let Some((off, line_end)) = get_next_line_start_and_end(data, cursor) {
         data = &data[off..];
-        match state {
-            HeaderParsingState::Format => match data.split_first_chunk::<7>() {
+        *cursor += line_end;
+        match section {
+            HeaderSection::Format => match data.split_first_chunk::<7>() {
                 Some((b"format ", data)) => {
                     let format = if data.starts_with(b"ascii 1.0") {
                         Format::Ascii
@@ -174,11 +270,11 @@ fn parse_header(
                     if s[1..].starts_with(b"vertex ") {
                         head.nv = parse_int(&s[8..]).ok_or(())?.0;
                         head.v_first_over_f = true;
-                        *state = HeaderParsingState::Vertex;
+                        *section = HeaderSection::Vertex;
                     } else if s[1..].starts_with(b"face ") {
                         head.nf = parse_int(&s[6..]).ok_or(())?.0;
                         head.v_first_over_f = false;
-                        *state = HeaderParsingState::Face;
+                        *section = HeaderSection::Face;
                     } else {
                         let mut found_blank = false;
                         let int_start = s
@@ -189,13 +285,13 @@ fn parse_header(
                             })
                             .ok_or(())?;
                         let n = parse_int(&s[int_start..]).ok_or(())?.0;
-                        head.useless_before_first.push((n, Vec::new()));
-                        *state = HeaderParsingState::Useless;
+                        head.useless_before.push((n, Vec::new()));
+                        *section = HeaderSection::Useless;
                     }
                 }
                 _ => return Err(()),
             },
-            HeaderParsingState::Vertex => match data.split_first_chunk::<8>() {
+            HeaderSection::Vertex => match data.split_first_chunk::<8>() {
                 Some((b"element ", s)) => {
                     if s[..].starts_with(b"vertex ") {
                         return Err(());
@@ -204,7 +300,7 @@ fn parse_header(
                             return Err(());
                         }
                         head.nf = parse_int(&s[5..]).ok_or(())?.0;
-                        *state = HeaderParsingState::Face;
+                        *section = HeaderSection::Face;
                     } else {
                         if head.nf == 0 {
                             let mut found_blank = false;
@@ -218,7 +314,7 @@ fn parse_header(
                             let n = parse_int(&s[int_start..]).ok_or(())?.0;
                             head.useless_between.push((n, Vec::new()));
                         }
-                        *state = HeaderParsingState::Useless;
+                        *section = HeaderSection::Useless;
                     }
                 }
                 Some((b"property", s)) if s.starts_with(b" ") => {
@@ -249,7 +345,7 @@ fn parse_header(
                 Some((b"end_head", s)) if s.starts_with(b"er") => return Ok(true),
                 _ => return Err(()),
             },
-            HeaderParsingState::Face => match data.split_first_chunk::<8>() {
+            HeaderSection::Face => match data.split_first_chunk::<8>() {
                 Some((b"element ", s)) => {
                     if s[..].starts_with(b"face ") {
                         return Err(());
@@ -258,7 +354,7 @@ fn parse_header(
                             return Err(());
                         }
                         head.nv = parse_int(&s[7..]).ok_or(())?.0;
-                        *state = HeaderParsingState::Vertex;
+                        *section = HeaderSection::Vertex;
                     } else {
                         if head.nv == 0 {
                             let mut found_blank = false;
@@ -272,7 +368,7 @@ fn parse_header(
                             let n = parse_int(&s[int_start..]).ok_or(())?.0;
                             head.useless_between.push((n, Vec::new()));
                         }
-                        *state = HeaderParsingState::Useless;
+                        *section = HeaderSection::Useless;
                     }
                 }
                 Some((b"property", s)) if s.starts_with(b" ") => {
@@ -292,7 +388,7 @@ fn parse_header(
                 Some((b"end_head", s)) if s.starts_with(b"er") => return Ok(true),
                 _ => return Err(()),
             },
-            HeaderParsingState::Useless => match data.split_first_chunk::<8>() {
+            HeaderSection::Useless => match data.split_first_chunk::<8>() {
                 Some((b"element ", s)) => {
                     if s[..].starts_with(b"face ") {
                         if head.nf != 0 {
@@ -302,7 +398,7 @@ fn parse_header(
                             head.v_first_over_f = true;
                         }
                         head.nf = parse_int(&s[6..]).ok_or(())?.0;
-                        *state = HeaderParsingState::Face;
+                        *section = HeaderSection::Face;
                     } else if s[..].starts_with(b"vertex ") {
                         if head.nv != 0 {
                             return Err(());
@@ -311,7 +407,7 @@ fn parse_header(
                             head.v_first_over_f = false;
                         }
                         head.nv = parse_int(&s[8..]).ok_or(())?.0;
-                        *state = HeaderParsingState::Vertex;
+                        *section = HeaderSection::Vertex;
                     } else {
                         let mut found_blank = false;
                         let int_start = s
@@ -325,9 +421,9 @@ fn parse_header(
                         if head.useless_between.len() != 0 {
                             head.useless_between.push((n, Vec::new()));
                         } else {
-                            head.useless_before_first.push((n, Vec::new()));
+                            head.useless_before.push((n, Vec::new()));
                         }
-                        *state = HeaderParsingState::Useless;
+                        *section = HeaderSection::Useless;
                     }
                 }
                 Some((b"property", s)) => {
@@ -337,7 +433,7 @@ fn parse_header(
                             if let Some((_n, strides)) = head.useless_between.last_mut() {
                                 strides.push(typ);
                             } else {
-                                head.useless_before_first.last_mut().unwrap().1.push(typ);
+                                head.useless_before.last_mut().unwrap().1.push(typ);
                             }
                         }
                     }
@@ -346,7 +442,6 @@ fn parse_header(
                 _ => return Err(()),
             },
         }
-        *cursor += line_end;
         data = &data[line_end..];
     }
     Ok(false)
@@ -380,6 +475,165 @@ fn get_next_line_start_and_end(data: &[u8], cursor: &mut usize) -> Option<(usize
     None
 }
 
+fn parse_ascii(
+    mut data: &[u8],
+    cursor: &mut usize,
+    infos: &AsciiInfos,
+    line: &mut usize,
+    vertices: &mut Vec<[f32; 3]>,
+    indices: &mut Vec<u32>,
+    strides: &mut Vec<u8>,
+    mode: &mut FaceMode,
+) -> Result<bool, ()> {
+    loop {
+        if (*line as u32) < infos.useless_before {
+            let mut i = 0;
+            while (*line as u32) < u32::min(infos.face_start, infos.vertex_start) && i < data.len()
+            {
+                if data[i] == b'\n' {
+                    *line += 1;
+                }
+                i += 1;
+            }
+            *cursor += i;
+            if i == data.len() {
+                return Ok(false);
+            }
+            data = &data[i..];
+        } else {
+            if (*line as u32) >= infos.face_start && (*line as u32) < infos.face_start + infos.nf {
+                while (*line as u32) < infos.face_start + infos.nf {
+                    if let Some((off, line_end)) = get_next_line_start_and_end(data, cursor) {
+                        *cursor += line_end;
+                        data = &data[off..];
+
+                        let mut i = 0;
+                        for typ in &infos.i_stride[..infos.i_stride_i as usize] {
+                            i += typ.skip_ascii(&data[i..]).ok_or(())?;
+                        }
+
+                        let (face_len, endword) = parse_int(&data[i..]).ok_or(())?;
+                        i += endword;
+                        if face_len >= 3 && *mode != FaceMode::Polygon {
+                            if *mode == FaceMode::Undetermined {
+                                if face_len == 3 {
+                                    *mode = FaceMode::Triangle;
+                                } else if face_len == 4 {
+                                    *mode = FaceMode::Quad;
+                                } else {
+                                    *mode = FaceMode::Polygon;
+                                }
+                            } else if *mode == FaceMode::Triangle && face_len != 3 {
+                                *strides = vec![3; indices.len() / 3];
+                                strides.reserve(3 * infos.nf as usize - strides.len());
+                                *mode = FaceMode::Polygon;
+                            } else if *mode == FaceMode::Quad && face_len != 4 {
+                                *strides = vec![4; indices.len() / 4];
+                                *mode = FaceMode::Polygon;
+                                strides.reserve(2 * infos.nf as usize - strides.len());
+                            }
+                        }
+                        if face_len >= 3 && *mode == FaceMode::Polygon {
+                            strides.push(face_len as u8);
+                        }
+
+                        while i < data.len() && data[i] == b' ' {
+                            i += 1;
+                        }
+
+                        for j in 0..face_len {
+                            let (v, endword) = parse_int(&data[i..]).ok_or(())?;
+                            indices.push(v);
+                            i += endword + 1;
+                            if j != face_len - 1 {
+                                i += data[i..].iter().position(|&c| c != b' ').ok_or(())?;
+                            }
+                        }
+                        *line += 1;
+                        data = &data[line_end..];
+                    } else {
+                        return Ok(false);
+                    }
+                }
+            } else if (*line as u32) >= infos.vertex_start
+                && (*line as u32) < infos.vertex_start + infos.nv
+            {
+                while (*line as u32) < infos.vertex_start + infos.nv {
+                    if let Some((off, line_end)) = get_next_line_start_and_end(data, cursor) {
+                        *cursor += line_end;
+                        data = &data[off..];
+
+                        let mut res = [0., 0., 0.];
+                        let max_i = infos
+                            .v_x_stride_i
+                            .max(infos.v_y_stride_i)
+                            .max(infos.v_z_stride_i)
+                            + 1;
+                        let mut i = 0;
+
+                        for (index, typ) in infos.v_stride[..max_i as usize].iter().enumerate() {
+                            if index == infos.v_x_stride_i as usize {
+                                let (f, acc) = unsafe { parse_float(&data[i..]).ok_or(())? };
+                                res[0] = f;
+                                i += acc;
+                            } else if index == infos.v_y_stride_i as usize {
+                                let (f, acc) = unsafe { parse_float(&data[i..]).ok_or(())? };
+                                res[1] = f;
+                                i += acc;
+                            } else if index == infos.v_z_stride_i as usize {
+                                let (f, acc) = unsafe { parse_float(&data[i..]).ok_or(())? };
+                                res[2] = f;
+                                i += acc;
+                            } else {
+                                i += typ.skip_ascii(&data[i..]).ok_or(())?;
+                            }
+                        }
+                        vertices.push(res);
+                        *line += 1;
+                        data = &data[line_end..];
+                    } else {
+                        return Ok(false);
+                    }
+                }
+            } else if (*line as u32) < u32::max(infos.vertex_start, infos.face_start) {
+                let mut i = 0;
+                while (*line as u32) < u32::max(infos.face_start, infos.vertex_start)
+                    && i < data.len()
+                {
+                    if data[i] == b'\n' {
+                        *line += 1;
+                    }
+                    i += 1;
+                }
+                *cursor += i;
+                if i == data.len() {
+                    return Ok(false);
+                }
+                data = &data[i..];
+            } else {
+                return Ok(true);
+            }
+        }
+    }
+}
+
+unsafe fn parse_float(slice: &[u8]) -> Option<(f32, usize)> {
+    unsafe {
+        let mut i = 0;
+        while slice[i] == b' ' {
+            i += 1;
+        }
+        let sep = find_blank_or_newline(&slice[i + 1..])? + 1;
+        let f = FromStr::from_str(std::str::from_utf8_unchecked(&slice[i..(i + sep)])).ok()?;
+        i += sep + 1;
+        if slice[i] == b' ' {
+            i += slice[i..].iter().position(|&c| c != b' ')?;
+        }
+
+        Some((f, i))
+    }
+}
+
 pub fn load_ply(file_name: impl AsRef<Path>) -> (Vec<[f32; 3]>, SurfaceIndices) {
     let file = match File::open(file_name.as_ref()) {
         Ok(f) => f,
@@ -396,25 +650,26 @@ pub fn load_ply_buf<B>(reader: &mut B) -> (Vec<[f32; 3]>, SurfaceIndices)
 where
     B: BufRead,
 {
-    let mut nf = 0;
-    let mut nv = 0;
     let mut vertices = Vec::new();
+    let mut indices = Vec::new();
+    let mut strides: Vec<u8> = Vec::new();
+    let mut mode = FaceMode::Undetermined;
     const BUFFER_SIZE: usize = 65536;
     let mut buf = [0; BUFFER_SIZE];
     let mut start = 0;
-    let mut header_parsed = false;
+    let mut line = 0;
     let mut first = true;
-    let mut head = HeadingInfos::default();
-    let mut heading_state = HeaderParsingState::Format;
+    let mut parsing_state = ParsingState::new();
+    let mut header_parsing_state = HeaderSection::Format;
 
-    while let Ok(size) = reader.read(&mut buf[start..]) {
+    'outer: while let Ok(size) = reader.read(&mut buf[start..]) {
         if size == 0 && start == 0 {
             break;
         }
         let end = size + start;
         let mut last = 0;
 
-        let data = if first {
+        let mut data = if first {
             first = false;
             let (prelude, data) = buf.split_first_chunk::<3>().unwrap();
             assert!(prelude == b"ply");
@@ -424,14 +679,46 @@ where
             &buf[..end]
         };
 
-        if !header_parsed {
-            if let Ok(parsed) = parse_header(data, &mut last, &mut head, &mut heading_state) {
-                header_parsed = parsed;
-                if parsed {
-                    break;
+        loop {
+            match &mut parsing_state {
+                ParsingState::Header(head) => {
+                    let old_last = last;
+                    let parsed =
+                        parse_header(data, &mut last, head, &mut header_parsing_state).unwrap();
+                    let advanced = last - old_last;
+                    if parsed {
+                        parsing_state = parsing_state.finalize().unwrap();
+                        data = &data[advanced..];
+                    } else {
+                        break;
+                    }
                 }
-            } else {
-                panic!();
+                ParsingState::Ascii(infos) => {
+                    let res = parse_ascii(
+                        data,
+                        &mut last,
+                        infos,
+                        &mut line,
+                        &mut vertices,
+                        &mut indices,
+                        &mut strides,
+                        &mut mode,
+                    )
+                    .unwrap();
+                    if res {
+                        assert!(infos.nv as usize == vertices.len());
+                        match mode {
+                            FaceMode::Undetermined => panic!(),
+                            FaceMode::Triangle => assert!(infos.nf as usize == indices.len() / 3),
+                            FaceMode::Quad => assert!(infos.nf as usize == indices.len() / 4),
+                            FaceMode::Polygon => assert!(infos.nf as usize == strides.len()),
+                        }
+                        break 'outer;
+                    } else {
+                        break;
+                    }
+                }
+                ParsingState::Binary(infos) => (),
             }
         }
 
@@ -439,10 +726,12 @@ where
         buf.copy_within(last..end, 0);
     }
 
-    let indices = (0..nf)
-        .into_iter()
-        .map(|i| [3 * i, 3 * i + 1, 3 * i + 2])
-        .collect::<Vec<_>>()
-        .into();
+    let indices = if mode == FaceMode::Polygon {
+        (indices, strides).into()
+    } else if mode == FaceMode::Quad {
+        into_chunks::<4>(indices).into()
+    } else {
+        into_chunks::<3>(indices).into()
+    };
     (vertices, indices)
 }
