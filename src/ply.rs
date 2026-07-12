@@ -66,6 +66,73 @@ impl RawType {
             RawType::Double => 8,
         }
     }
+
+    fn parse_binary_uint(&self, data: &[u8], big_endian: bool) -> Result<Option<u32>, ()> {
+        match self {
+            RawType::Char | RawType::UChar => Ok(data.first_chunk::<1>().map(|&b| {
+                if big_endian {
+                    u8::from_be_bytes(b) as u32
+                } else {
+                    u8::from_le_bytes(b) as u32
+                }
+            })),
+            RawType::Short | RawType::UShort => Ok(data.first_chunk::<2>().map(|&b| {
+                if big_endian {
+                    u16::from_be_bytes(b) as u32
+                } else {
+                    u16::from_le_bytes(b) as u32
+                }
+            })),
+            RawType::Int | RawType::UInt => Ok(data.first_chunk::<4>().map(|&b| {
+                if big_endian {
+                    u32::from_be_bytes(b) as u32
+                } else {
+                    u32::from_le_bytes(b) as u32
+                }
+            })),
+            RawType::Double | RawType::Float => Err(()),
+        }
+    }
+
+    fn parse_binary_float(&self, data: &[u8], big_endian: bool) -> Option<f32> {
+        match self {
+            RawType::Char | RawType::UChar => data.first_chunk::<1>().map(|&b| {
+                if big_endian {
+                    u8::from_be_bytes(b) as f32
+                } else {
+                    u8::from_le_bytes(b) as f32
+                }
+            }),
+            RawType::Short | RawType::UShort => data.first_chunk::<2>().map(|&b| {
+                if big_endian {
+                    u16::from_be_bytes(b) as f32
+                } else {
+                    u16::from_le_bytes(b) as f32
+                }
+            }),
+            RawType::Int | RawType::UInt => data.first_chunk::<4>().map(|&b| {
+                if big_endian {
+                    u32::from_be_bytes(b) as f32
+                } else {
+                    u32::from_le_bytes(b) as f32
+                }
+            }),
+            RawType::Float => data.first_chunk::<4>().map(|&b| {
+                if big_endian {
+                    f32::from_be_bytes(b)
+                } else {
+                    f32::from_le_bytes(b)
+                }
+            }),
+            RawType::Double => data.first_chunk::<8>().map(|&b| {
+                if big_endian {
+                    f64::from_be_bytes(b) as f32
+                } else {
+                    f64::from_le_bytes(b) as f32
+                }
+            }),
+        }
+    }
 }
 
 impl Type {
@@ -106,6 +173,30 @@ impl Type {
                 }
                 i += data[i..].iter().position(|&c| c != b' ')?;
                 Some(i)
+            }
+        }
+    }
+
+    fn skip_binary(&self, data: &[u8], big_endian: bool) -> Result<Option<usize>, ()> {
+        match self {
+            Type::Single(t) => {
+                if data.len() >= t.len() as usize {
+                    Ok(Some(t.len() as usize))
+                } else {
+                    Ok(None)
+                }
+            }
+            Type::List(t1, t2) => {
+                let n = t1.parse_binary_uint(data, big_endian)?;
+                Ok(n.map(|n| {
+                    let list_byte_len = t1.len() as usize + n as usize * t2.len() as usize;
+                    if data.len() >= list_byte_len {
+                        Some(list_byte_len)
+                    } else {
+                        None
+                    }
+                })
+                .flatten())
             }
         }
     }
@@ -452,7 +543,7 @@ fn get_next_line_start_and_end(data: &[u8], cursor: &mut usize) -> Option<(usize
     while i < data.len() {
         let char = data[i];
         if char != b' ' {
-            if char == b'c' || char == b'\n' || char == b'\r' {
+            if char == b'c' || char == b'o' || char == b'\n' || char == b'\r' {
                 match data[i..].iter().position(|&c| c == b'\n') {
                     Some(off) => i += off + 1,
                     None => {
@@ -465,7 +556,7 @@ fn get_next_line_start_and_end(data: &[u8], cursor: &mut usize) -> Option<(usize
                 return data[i..]
                     .iter()
                     .position(|&c| c == b'\n')
-                    .map(|off| (i, off));
+                    .map(|off| (i, off + 1));
             }
         } else {
             i += 1;
@@ -617,8 +708,232 @@ fn parse_ascii(
     }
 }
 
+fn skip_elem_binary(
+    data: &mut &[u8],
+    types: &[Type],
+    infos: &BinaryInfos,
+) -> Result<Option<usize>, ()> {
+    let mut elem_bytes = 0;
+    for typ in types {
+        if let Some(size) = typ.skip_binary(data, infos.big_endian)? {
+            *data = &data[size..];
+            elem_bytes += size;
+        } else {
+            return Ok(None);
+        }
+    }
+    Ok(Some(elem_bytes))
+}
+
+fn parse_vertex_binary(
+    data: &mut &[u8],
+    infos: &BinaryInfos,
+    vertices: &mut Vec<[f32; 3]>,
+) -> Result<Option<usize>, ()> {
+    let mut elem_bytes = 0;
+    let mut res = [0., 0., 0.];
+    for (i, typ) in infos.v_stride.iter().enumerate() {
+        if i == infos.v_x_stride_i as usize {
+            match typ {
+                Type::Single(t) => {
+                    res[0] = match t.parse_binary_float(data, infos.big_endian) {
+                        Some(v) => v,
+                        None => return Ok(None),
+                    };
+                    elem_bytes += t.len() as usize;
+                    *data = &data[t.len() as usize..];
+                }
+                Type::List(_, _) => return Err(()),
+            }
+        } else if i == infos.v_y_stride_i as usize {
+            match typ {
+                Type::Single(t) => {
+                    res[1] = match t.parse_binary_float(data, infos.big_endian) {
+                        Some(v) => v,
+                        None => return Ok(None),
+                    };
+                    elem_bytes += t.len() as usize;
+                    *data = &data[t.len() as usize..];
+                }
+                Type::List(_, _) => return Err(()),
+            }
+        } else if i == infos.v_z_stride_i as usize {
+            match typ {
+                Type::Single(t) => {
+                    res[2] = match t.parse_binary_float(data, infos.big_endian) {
+                        Some(v) => v,
+                        None => return Ok(None),
+                    };
+                    elem_bytes += t.len() as usize;
+                    *data = &data[t.len() as usize..];
+                }
+                Type::List(_, _) => return Err(()),
+            }
+        } else {
+            if let Some(size) = typ.skip_binary(data, infos.big_endian)? {
+                *data = &data[size..];
+                elem_bytes += size;
+            } else {
+                return Ok(None);
+            }
+        }
+    }
+    vertices.push(res);
+    Ok(Some(elem_bytes))
+}
+
+fn parse_face_binary(
+    data: &mut &[u8],
+    infos: &BinaryInfos,
+    indices: &mut Vec<u32>,
+    strides: &mut Vec<u8>,
+    mode: &mut FaceMode,
+) -> Result<Option<usize>, ()> {
+    let mut elem_bytes = 0;
+    let orig_len = indices.len();
+    let mut face_len = 0;
+    for (i, typ) in infos.i_stride.iter().enumerate() {
+        if i == infos.i_stride_i as usize {
+            match typ {
+                Type::Single(_) => return Err(()),
+                Type::List(t1, t2) => {
+                    if let Some(n) = t1.parse_binary_uint(data, infos.big_endian)? {
+                        *data = &data[t1.len() as usize..];
+                        face_len = n;
+                        for _ in 0..n {
+                            if let Some(index) = t2.parse_binary_uint(data, infos.big_endian)? {
+                                *data = &data[t2.len() as usize..];
+                                indices.push(index);
+                            } else {
+                                indices.truncate(orig_len);
+                                return Ok(None);
+                            }
+                        }
+                        elem_bytes += t1.len() as usize + t2.len() as usize * n as usize;
+                    } else {
+                        return Ok(None);
+                    }
+                }
+            }
+        } else {
+            if let Some(size) = typ.skip_binary(data, infos.big_endian)? {
+                *data = &data[size..];
+                elem_bytes += size;
+            } else {
+                indices.truncate(orig_len);
+                return Ok(None);
+            }
+        }
+    }
+    if face_len < 3 {
+        return Err(());
+    }
+    if *mode != FaceMode::Polygon {
+        if *mode == FaceMode::Undetermined {
+            if face_len == 3 {
+                *mode = FaceMode::Triangle;
+            } else if face_len == 4 {
+                *mode = FaceMode::Quad;
+            } else {
+                *mode = FaceMode::Polygon;
+            }
+        } else if *mode == FaceMode::Triangle && face_len != 3 {
+            *strides = vec![3; (indices.len() - face_len as usize) / 3];
+            strides.reserve(3 * infos.nf as usize - strides.len());
+            *mode = FaceMode::Polygon;
+        } else if *mode == FaceMode::Quad && face_len != 4 {
+            *strides = vec![4; (indices.len() - face_len as usize) / 4];
+            *mode = FaceMode::Polygon;
+            strides.reserve(2 * infos.nf as usize - strides.len());
+        }
+    }
+    if *mode == FaceMode::Polygon {
+        strides.push(face_len as u8);
+    }
+    Ok(Some(elem_bytes))
+}
+
+fn parse_binary(
+    mut data: &[u8],
+    cursor: &mut usize,
+    infos: &BinaryInfos,
+    n_elem: &mut usize,
+    vertices: &mut Vec<[f32; 3]>,
+    indices: &mut Vec<u32>,
+    strides: &mut Vec<u8>,
+    mode: &mut FaceMode,
+) -> Result<bool, ()> {
+    let mut n_tot = 0;
+    for (n, types) in &infos.useless_before {
+        n_tot += n;
+        while *n_elem < n_tot as usize {
+            if let Some(elem_bytes) = skip_elem_binary(&mut data, types, infos)? {
+                *cursor += elem_bytes;
+                *n_elem += 1;
+            } else {
+                return Ok(false);
+            }
+        }
+    }
+    if infos.v_first_over_f {
+        n_tot += infos.nv;
+        while *n_elem < n_tot as usize {
+            if let Some(elem_bytes) = parse_vertex_binary(&mut data, infos, vertices)? {
+                *cursor += elem_bytes;
+                *n_elem += 1;
+            } else {
+                return Ok(false);
+            }
+        }
+    } else {
+        n_tot += infos.nv;
+        while *n_elem < n_tot as usize {
+            if let Some(elem_bytes) = parse_face_binary(&mut data, infos, indices, strides, mode)? {
+                *cursor += elem_bytes;
+                *n_elem += 1;
+            } else {
+                return Ok(false);
+            }
+        }
+    }
+    for (n, types) in &infos.useless_between {
+        n_tot += n;
+        while *n_elem < n_tot as usize {
+            if let Some(elem_bytes) = skip_elem_binary(&mut data, types, infos)? {
+                *cursor += elem_bytes;
+                *n_elem += 1;
+            } else {
+                return Ok(false);
+            }
+        }
+    }
+    if !infos.v_first_over_f {
+        n_tot += infos.nv;
+        while *n_elem < n_tot as usize {
+            if let Some(elem_bytes) = parse_vertex_binary(&mut data, infos, vertices)? {
+                *cursor += elem_bytes;
+                *n_elem += 1;
+            } else {
+                return Ok(false);
+            }
+        }
+    } else {
+        n_tot += infos.nv;
+        while *n_elem < n_tot as usize {
+            if let Some(elem_bytes) = parse_face_binary(&mut data, infos, indices, strides, mode)? {
+                *cursor += elem_bytes;
+                *n_elem += 1;
+            } else {
+                return Ok(false);
+            }
+        }
+    }
+    Ok(true)
+}
+
 unsafe fn parse_float(slice: &[u8]) -> Option<(f32, usize)> {
     unsafe {
+        //let mut i = position();
         let mut i = 0;
         while slice[i] == b' ' {
             i += 1;
@@ -626,7 +941,7 @@ unsafe fn parse_float(slice: &[u8]) -> Option<(f32, usize)> {
         let sep = find_blank_or_newline(&slice[i + 1..])? + 1;
         let f = FromStr::from_str(std::str::from_utf8_unchecked(&slice[i..(i + sep)])).ok()?;
         i += sep + 1;
-        if slice[i] == b' ' {
+        if let Some(b' ') = slice.get(i) {
             i += slice[i..].iter().position(|&c| c != b' ')?;
         }
 
@@ -657,7 +972,7 @@ where
     const BUFFER_SIZE: usize = 65536;
     let mut buf = [0; BUFFER_SIZE];
     let mut start = 0;
-    let mut line = 0;
+    let mut parsing_tracker = 0;
     let mut first = true;
     let mut parsing_state = ParsingState::new();
     let mut header_parsing_state = HeaderSection::Format;
@@ -683,10 +998,10 @@ where
             match &mut parsing_state {
                 ParsingState::Header(head) => {
                     let old_last = last;
-                    let parsed =
+                    let done =
                         parse_header(data, &mut last, head, &mut header_parsing_state).unwrap();
                     let advanced = last - old_last;
-                    if parsed {
+                    if done {
                         parsing_state = parsing_state.finalize().unwrap();
                         data = &data[advanced..];
                     } else {
@@ -694,18 +1009,18 @@ where
                     }
                 }
                 ParsingState::Ascii(infos) => {
-                    let res = parse_ascii(
+                    let done = parse_ascii(
                         data,
                         &mut last,
                         infos,
-                        &mut line,
+                        &mut parsing_tracker,
                         &mut vertices,
                         &mut indices,
                         &mut strides,
                         &mut mode,
                     )
                     .unwrap();
-                    if res {
+                    if done {
                         assert!(infos.nv as usize == vertices.len());
                         match mode {
                             FaceMode::Undetermined => panic!(),
@@ -718,7 +1033,31 @@ where
                         break;
                     }
                 }
-                ParsingState::Binary(infos) => (),
+                ParsingState::Binary(infos) => {
+                    let done = parse_binary(
+                        data,
+                        &mut last,
+                        infos,
+                        &mut parsing_tracker,
+                        &mut vertices,
+                        &mut indices,
+                        &mut strides,
+                        &mut mode,
+                    )
+                    .unwrap();
+                    if done {
+                        assert!(infos.nv as usize == vertices.len());
+                        match mode {
+                            FaceMode::Undetermined => panic!(),
+                            FaceMode::Triangle => assert!(infos.nf as usize == indices.len() / 3),
+                            FaceMode::Quad => assert!(infos.nf as usize == indices.len() / 4),
+                            FaceMode::Polygon => assert!(infos.nf as usize == strides.len()),
+                        }
+                        break 'outer;
+                    } else {
+                        break;
+                    }
+                }
             }
         }
 

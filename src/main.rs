@@ -9,6 +9,12 @@ fn main() {
     //assert!(f.len() == 28055728);
     //load_ply("/home/lieunoir/rust/mesh_parsers/assets/cube1.ply");
     //let f = load_ply("/home/lieunoir/rust/mesh_parsers/assets/cube2.ply");
-    let f = load_ply("/home/lieunoir/meshes/bunny_ply/bun_zipper.ply");
+    //let f = load_ply("/home/lieunoir/meshes/bunny_ply/bun_zipper.ply");
+    let f = load_ply("/home/lieunoir/meshes/drill/reconstruction/drill_shaft_vrip.ply");
     println!("{:?}", f.0);
+    //let f = load_ply("/home/lieunoir/meshes/platonic_shelf.ply");
+    //let f = load_ply("/home/lieunoir/meshes/platonic_shelf_big_endian.ply");
+    //println!("{:?}", f.0);
+    //let f = load_ply("/home/lieunoir/meshes/platonic_shelf_ascii.ply");
+    //println!("{:?}", f.0);
 }
