@@ -41,7 +41,7 @@ fn parse_face_indices(
 ) -> Option<usize> {
     let mut off = 0;
     let mut data = face_str;
-    while data.len() > 0 && data[0] == b' ' {
+    while !data.is_empty() && data[0] == b' ' {
         data = &data[1..];
     }
 

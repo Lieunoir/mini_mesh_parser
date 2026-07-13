@@ -16,7 +16,7 @@ pub fn parse_file<const BUFFER_SIZE: usize>(
 ) -> Result<(Vec<[f32; 3]>, SurfaceIndices), ()> {
     let file = File::open(file_name.as_ref()).map_err(|_| ())?;
     let mut reader = BufReader::new(file);
-    let format_hint = file_name.as_ref().extension().map(|s| s.to_str()).flatten();
+    let format_hint = file_name.as_ref().extension().and_then(|s| s.to_str());
     parse_reader::<_, BUFFER_SIZE>(&mut reader, format_hint)
 }
 
@@ -111,22 +111,22 @@ enum FaceMode {
     Undetermined,
 }
 
-impl Into<SurfaceIndices> for Vec<[u32; 3]> {
-    fn into(self) -> SurfaceIndices {
-        SurfaceIndices::Triangles(self)
+impl From<Vec<[u32; 3]>> for SurfaceIndices {
+    fn from(value: Vec<[u32; 3]>) -> Self {
+        SurfaceIndices::Triangles(value)
     }
 }
 
-impl Into<SurfaceIndices> for Vec<[u32; 4]> {
-    fn into(self) -> SurfaceIndices {
-        SurfaceIndices::Quads(self)
+impl From<Vec<[u32; 4]>> for SurfaceIndices {
+    fn from(value: Vec<[u32; 4]>) -> Self {
+        SurfaceIndices::Quads(value)
     }
 }
 
-impl Into<SurfaceIndices> for (Vec<u32>, Vec<u32>) {
-    fn into(self) -> SurfaceIndices {
+impl From<(Vec<u32>, Vec<u32>)> for SurfaceIndices {
+    fn from(value: (Vec<u32>, Vec<u32>)) -> SurfaceIndices {
         let mut count = 0;
-        let mut faces_indices = self
+        let mut faces_indices = value
             .1
             .into_iter()
             .map(|s| {
@@ -135,14 +135,14 @@ impl Into<SurfaceIndices> for (Vec<u32>, Vec<u32>) {
             })
             .collect::<Vec<_>>();
         faces_indices.push(count);
-        SurfaceIndices::Polygons(self.0, faces_indices)
+        SurfaceIndices::Polygons(value.0, faces_indices)
     }
 }
 
-impl Into<SurfaceIndices> for (Vec<u32>, Vec<u8>) {
-    fn into(self) -> SurfaceIndices {
+impl From<(Vec<u32>, Vec<u8>)> for SurfaceIndices {
+    fn from(value: (Vec<u32>, Vec<u8>)) -> SurfaceIndices {
         let mut count = 0;
-        let mut faces_indices = self
+        let mut faces_indices = value
             .1
             .into_iter()
             .map(|s| {
@@ -151,7 +151,7 @@ impl Into<SurfaceIndices> for (Vec<u32>, Vec<u8>) {
             })
             .collect::<Vec<_>>();
         faces_indices.push(count);
-        SurfaceIndices::Polygons(self.0, faces_indices)
+        SurfaceIndices::Polygons(value.0, faces_indices)
     }
 }
 

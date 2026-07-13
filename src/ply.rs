@@ -81,9 +81,9 @@ impl RawType {
             })),
             RawType::Int | RawType::UInt => Ok(data.first_chunk::<4>().map(|&b| {
                 if big_endian {
-                    u32::from_be_bytes(b) as u32
+                    u32::from_be_bytes(b)
                 } else {
-                    u32::from_le_bytes(b) as u32
+                    u32::from_le_bytes(b)
                 }
             })),
             RawType::Double | RawType::Float => Err(()),
@@ -184,15 +184,14 @@ impl Type {
             }
             Type::List(t1, t2) => {
                 let n = t1.parse_binary_uint(data, big_endian)?;
-                Ok(n.map(|n| {
+                Ok(n.and_then(|n| {
                     let list_byte_len = t1.len() as usize + n as usize * t2.len() as usize;
                     if data.len() >= list_byte_len {
                         Some(list_byte_len)
                     } else {
                         None
                     }
-                })
-                .flatten())
+                }))
             }
         }
     }
@@ -296,11 +295,7 @@ impl ParsingState {
                     }))
                 }
                 format @ Format::BigEndian | format @ Format::LittleEndian => {
-                    let big_endian = if let Format::BigEndian = format {
-                        true
-                    } else {
-                        false
-                    };
+                    let big_endian = matches!(format, Format::BigEndian);
                     Ok(ParsingState::Binary(BinaryInfos {
                         big_endian,
                         nv,
@@ -505,7 +500,7 @@ fn parse_header(
                             })
                             .ok_or(())?;
                         let n = parse_int(&s[int_start..]).ok_or(())?.0;
-                        if head.useless_between.len() != 0 {
+                        if !head.useless_between.is_empty() {
                             head.useless_between.push((n, Vec::new()));
                         } else {
                             head.useless_before.push((n, Vec::new()));
@@ -514,14 +509,12 @@ fn parse_header(
                     }
                 }
                 Some((b"property", s)) => {
-                    if s.starts_with(b" ") {
-                        if head.nf == 0 || head.nv == 0 {
-                            let (typ, _l) = Type::parse(&s[1..]).ok_or(())?;
-                            if let Some((_n, strides)) = head.useless_between.last_mut() {
-                                strides.push(typ);
-                            } else {
-                                head.useless_before.last_mut().unwrap().1.push(typ);
-                            }
+                    if s.starts_with(b" ") && head.nf == 0 || head.nv == 0 {
+                        let (typ, _l) = Type::parse(&s[1..]).ok_or(())?;
+                        if let Some((_n, strides)) = head.useless_between.last_mut() {
+                            strides.push(typ);
+                        } else {
+                            head.useless_before.last_mut().unwrap().1.push(typ);
                         }
                     }
                 }
