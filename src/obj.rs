@@ -98,13 +98,13 @@ fn parse_face_indices(
         } else if *mode == FaceMode::Triangle && i != 3 {
             //add missing strides
             *strides = vec![3; (indices.len() - i) / 3];
-            strides.reserve(3 * 2 * pos_sz as usize - strides.len());
+            strides.reserve(2 * pos_sz as usize - strides.len());
             *mode = FaceMode::Polygon;
         } else if *mode == FaceMode::Quad && i != 4 {
             //add missing strides
             *strides = vec![4; (indices.len() - i) / 4];
             *mode = FaceMode::Polygon;
-            strides.reserve(4 * 2 * pos_sz as usize - strides.len());
+            strides.reserve(2 * pos_sz as usize - strides.len());
         }
     }
     if i >= 3 && *mode == FaceMode::Polygon {

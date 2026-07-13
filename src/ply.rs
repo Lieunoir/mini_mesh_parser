@@ -605,12 +605,12 @@ fn parse_ascii(
                                 }
                             } else if *mode == FaceMode::Triangle && face_len != 3 {
                                 *strides = vec![3; indices.len() / 3];
-                                strides.reserve(3 * infos.nf as usize - strides.len());
+                                strides.reserve(infos.nf as usize - strides.len());
                                 *mode = FaceMode::Polygon;
                             } else if *mode == FaceMode::Quad && face_len != 4 {
                                 *strides = vec![4; indices.len() / 4];
                                 *mode = FaceMode::Polygon;
-                                strides.reserve(2 * infos.nf as usize - strides.len());
+                                strides.reserve(infos.nf as usize - strides.len());
                             }
                         }
                         if face_len >= 3 && *mode == FaceMode::Polygon {

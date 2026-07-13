@@ -41,12 +41,18 @@ fn parse_face_indices(
 ) -> Option<usize> {
     let mut off = 0;
     let mut data = face_str;
-    while !data.is_empty() && data[0] == b' ' {
-        data = &data[1..];
+    while off < data.len() && data[off] == b' ' {
+        off += 1;
     }
+    data = &data[off..];
 
     let (face_len, mut endword) = parse_int(data)?;
-    if face_len >= 3 && *mode != FaceMode::Polygon {
+
+    if face_len < 3 {
+        return None;
+    }
+
+    if *mode != FaceMode::Polygon {
         if *mode == FaceMode::Undetermined {
             if face_len == 3 {
                 *mode = FaceMode::Triangle;
@@ -58,16 +64,16 @@ fn parse_face_indices(
         } else if *mode == FaceMode::Triangle && face_len != 3 {
             //add missing strides
             *strides = vec![3; indices.len() / 3];
-            strides.reserve(3 * nf - strides.len());
+            strides.reserve(nf - strides.len());
             *mode = FaceMode::Polygon;
         } else if *mode == FaceMode::Quad && face_len != 4 {
             //add missing strides
             *strides = vec![4; indices.len() / 4];
             *mode = FaceMode::Polygon;
-            strides.reserve(2 * nf - strides.len());
+            strides.reserve(nf - strides.len());
         }
     }
-    if face_len >= 3 && *mode == FaceMode::Polygon {
+    if *mode == FaceMode::Polygon {
         strides.push(face_len as u8);
     }
 
@@ -76,8 +82,29 @@ fn parse_face_indices(
     }
     off += endword;
     data = &data[endword..];
+    let (v, mut endword) = parse_int(data)?;
+    indices.push(v);
+    while endword < data.len() && data[endword] == b' ' {
+        endword += 1;
+    }
+    off += endword;
+    data = &data[endword..];
+    let (v, mut endword) = parse_int(data)?;
+    indices.push(v);
+    while endword < data.len() && data[endword] == b' ' {
+        endword += 1;
+    }
+    off += endword;
+    data = &data[endword..];
+    let (v, mut endword) = parse_int(data)?;
+    indices.push(v);
+    while endword < data.len() && data[endword] == b' ' {
+        endword += 1;
+    }
+    off += endword;
+    data = &data[endword..];
 
-    for _ in 0..face_len {
+    for _ in 0..face_len - 3 {
         let (v, mut endword) = parse_int(data)?;
         indices.push(v);
         while endword < data.len() && data[endword] == b' ' {
@@ -142,18 +169,28 @@ pub fn load_off_buf<B: BufRead, const BUFFER_SIZE: usize>(
                     let (off, pos) = unsafe { parse_float3(&buf[i..]) };
                     line_number += 1;
                     vertices.push(pos);
-                    i += off + 1;
+                    i += off;
+                    i += match buf[i] {
+                        b'\r' => 2,
+                        b'\n' => 1,
+                        _ => find_newline(&buf[i..]).ok_or(())? + 1,
+                    }
                 } else if line_number < 1 + nv + nf {
                     let off =
                         parse_face_indices(&buf[i..], &mut mode, &mut indices, &mut strides, nf)
                             .ok_or(())?;
                     line_number += 1;
-                    i += 1 + off;
+                    i += off;
+                    i += match buf[i] {
+                        b'\r' => 2,
+                        b'\n' => 1,
+                        _ => find_newline(&buf[i..]).ok_or(())? + 1,
+                    }
                 } else {
                     break 'outer;
                 }
             } else {
-                i += find_newline(&buf[1..]).ok_or(())? + 1;
+                i += find_newline(&buf[i..]).ok_or(())? + 1;
             }
         }
 
@@ -162,10 +199,19 @@ pub fn load_off_buf<B: BufRead, const BUFFER_SIZE: usize>(
     }
 
     let indices = if mode == FaceMode::Polygon {
+        if strides.len() != nf {
+            return Err(());
+        }
         (indices, strides).into()
     } else if mode == FaceMode::Quad {
+        if indices.len() / 4 != nf {
+            return Err(());
+        }
         into_chunks::<4>(indices).into()
     } else {
+        if indices.len() / 3 != nf {
+            return Err(());
+        }
         into_chunks::<3>(indices).into()
     };
     Ok((vertices, indices))
