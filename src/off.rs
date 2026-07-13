@@ -84,7 +84,6 @@ fn parse_face_indices(
     for _ in 0..face_len {
         let (v, mut endword) = parse_int(data).unwrap();
         indices.push(v);
-        endword += 1;
         while endword < data.len() && data[endword] == b' ' {
             endword += 1;
         }
@@ -150,15 +149,13 @@ where
                 if line_number == 0 {
                     if buf.split_first_chunk::<3>().unwrap().0 == b"OFF" {
                         i += find_newline(&buf[3..]).unwrap() + 4;
-                        continue;
-                    } else {
-                        let endword;
-                        (nv, nf, endword) = parse_header(&buf[i..]);
-                        vertices.reserve(nv);
-                        indices.reserve(3 * nf);
-                        line_number += 1;
-                        i += find_newline(&buf[i + endword..]).unwrap() + endword + 1;
                     }
+                    let endword;
+                    (nv, nf, endword) = parse_header(&buf[i..]);
+                    vertices.reserve(nv);
+                    indices.reserve(3 * nf);
+                    line_number += 1;
+                    i += find_newline(&buf[i + endword..]).unwrap() + endword + 1;
                 } else if line_number < nv + 1 {
                     let (off, pos) = unsafe { parse_float3(&buf[i..]) };
                     line_number += 1;

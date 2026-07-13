@@ -11,17 +11,17 @@ unsafe fn parse_float3(slice: &[u8]) -> (usize, [f32; 3]) {
         while slice[start] == b' ' {
             start += 1;
         }
-        let mut sep = find_blank_space(&slice[start + 2..]).unwrap() + 2;
+        let mut sep = find_blank_space(&slice[start + 1..]).unwrap() + 1;
         let f1 =
             FromStr::from_str(std::str::from_utf8_unchecked(&slice[start..(start + sep)])).unwrap();
         start += sep + 1;
         start += slice[start..].iter().position(|&c| c != b' ').unwrap();
-        sep = find_blank_space(&slice[start + 2..]).unwrap() + 2;
+        sep = find_blank_space(&slice[start + 1..]).unwrap() + 1;
         let f2 =
             FromStr::from_str(std::str::from_utf8_unchecked(&slice[start..(start + sep)])).unwrap();
         start += sep + 1;
         start += slice[start..].iter().position(|&c| c != b' ').unwrap();
-        sep = find_blank_or_newline(&slice[start + 2..]).unwrap() + 2;
+        sep = find_blank_or_newline(&slice[start + 1..]).unwrap() + 1;
         let f3 =
             FromStr::from_str(std::str::from_utf8_unchecked(&slice[start..(start + sep)])).unwrap();
         start += sep;
