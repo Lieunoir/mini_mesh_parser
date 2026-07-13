@@ -1,5 +1,6 @@
-use crate::{FaceMode, SurfaceIndices, find_blank_or_newline, into_chunks};
 use std::{io::BufRead, str::FromStr};
+
+use crate::{FaceMode, SurfaceIndices, find_blank_or_newline, into_chunks};
 
 enum Format {
     Ascii,
@@ -947,7 +948,7 @@ pub fn load_ply_buf<B: BufRead, const BUFFER_SIZE: usize>(
     reader: &mut B,
     buf: &mut [u8; BUFFER_SIZE],
     mut start: usize,
-) -> (Vec<[f32; 3]>, SurfaceIndices) {
+) -> Result<(Vec<[f32; 3]>, SurfaceIndices), ()> {
     let mut vertices = Vec::new();
     let mut indices = Vec::new();
     let mut strides: Vec<u8> = Vec::new();
@@ -966,7 +967,7 @@ pub fn load_ply_buf<B: BufRead, const BUFFER_SIZE: usize>(
 
         let mut data = if first {
             first = false;
-            let (prelude, data) = buf.split_first_chunk::<3>().unwrap();
+            let (prelude, data) = buf.split_first_chunk::<3>().ok_or(())?;
             assert!(prelude == b"ply");
             last += 3;
             &data[..end - 3]
@@ -978,15 +979,14 @@ pub fn load_ply_buf<B: BufRead, const BUFFER_SIZE: usize>(
             match &mut parsing_state {
                 ParsingState::Header(head) => {
                     let old_last = last;
-                    let done =
-                        parse_header(data, &mut last, head, &mut header_parsing_state).unwrap();
+                    let done = parse_header(data, &mut last, head, &mut header_parsing_state)?;
                     let advanced = last - old_last;
                     if done {
                         let nv = head.nv as usize;
                         let nf = head.nf as usize;
                         vertices.reserve(nv);
                         indices.reserve(nv + nf - 2);
-                        parsing_state = parsing_state.finalize().unwrap();
+                        parsing_state = parsing_state.finalize()?;
                         data = &data[advanced..];
                     } else {
                         break;
@@ -1002,15 +1002,19 @@ pub fn load_ply_buf<B: BufRead, const BUFFER_SIZE: usize>(
                         &mut indices,
                         &mut strides,
                         &mut mode,
-                    )
-                    .unwrap();
+                    )?;
                     if done {
-                        assert!(infos.nv as usize == vertices.len());
-                        match mode {
-                            FaceMode::Undetermined => panic!(),
-                            FaceMode::Triangle => assert!(infos.nf as usize == indices.len() / 3),
-                            FaceMode::Quad => assert!(infos.nf as usize == indices.len() / 4),
-                            FaceMode::Polygon => assert!(infos.nf as usize == strides.len()),
+                        let valid = {
+                            (infos.nv as usize == vertices.len())
+                                && match mode {
+                                    FaceMode::Undetermined => panic!(),
+                                    FaceMode::Triangle => infos.nf as usize == indices.len() / 3,
+                                    FaceMode::Quad => infos.nf as usize == indices.len() / 4,
+                                    FaceMode::Polygon => infos.nf as usize == strides.len(),
+                                }
+                        };
+                        if !valid {
+                            return Err(());
                         }
                         break 'outer;
                     } else {
@@ -1027,15 +1031,19 @@ pub fn load_ply_buf<B: BufRead, const BUFFER_SIZE: usize>(
                         &mut indices,
                         &mut strides,
                         &mut mode,
-                    )
-                    .unwrap();
+                    )?;
                     if done {
-                        assert!(infos.nv as usize == vertices.len());
-                        match mode {
-                            FaceMode::Undetermined => panic!(),
-                            FaceMode::Triangle => assert!(infos.nf as usize == indices.len() / 3),
-                            FaceMode::Quad => assert!(infos.nf as usize == indices.len() / 4),
-                            FaceMode::Polygon => assert!(infos.nf as usize == strides.len()),
+                        let valid = {
+                            (infos.nv as usize == vertices.len())
+                                && match mode {
+                                    FaceMode::Undetermined => panic!(),
+                                    FaceMode::Triangle => infos.nf as usize == indices.len() / 3,
+                                    FaceMode::Quad => infos.nf as usize == indices.len() / 4,
+                                    FaceMode::Polygon => infos.nf as usize == strides.len(),
+                                }
+                        };
+                        if !valid {
+                            return Err(());
                         }
                         break 'outer;
                     } else {
@@ -1056,5 +1064,5 @@ pub fn load_ply_buf<B: BufRead, const BUFFER_SIZE: usize>(
     } else {
         into_chunks::<3>(indices).into()
     };
-    (vertices, indices)
+    Ok((vertices, indices))
 }

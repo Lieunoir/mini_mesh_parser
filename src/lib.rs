@@ -11,39 +11,31 @@ pub mod off;
 pub mod ply;
 pub mod stl;
 
-pub struct SurfaceLoader<const BUFFER_SIZE: usize = 65536> {
-    buffer: [u8; BUFFER_SIZE],
+pub fn parse_file<const BUFFER_SIZE: usize>(
+    file_name: impl AsRef<Path>,
+) -> Result<(Vec<[f32; 3]>, SurfaceIndices), ()> {
+    let file = File::open(file_name.as_ref()).map_err(|_| ())?;
+    let mut reader = BufReader::new(file);
+    let format_hint = file_name.as_ref().extension().map(|s| s.to_str()).flatten();
+    parse_reader::<_, BUFFER_SIZE>(&mut reader, format_hint)
 }
 
-impl<const BUFFER_SIZE: usize> SurfaceLoader<BUFFER_SIZE> {
-    pub fn from_file(
-        self,
-        file_name: impl AsRef<Path>,
-    ) -> Result<(Vec<[f32; 3]>, SurfaceIndices), ()> {
-        let file = File::open(file_name.as_ref()).map_err(|_| ())?;
-        let mut reader = BufReader::new(file);
-        let format_hint = file_name.as_ref().extension().map(|s| s.to_str()).flatten();
-
-        self.from_buffer(&mut reader, format_hint)
-    }
-
-    pub fn from_buffer<B: BufRead>(
-        mut self,
-        reader: &mut B,
-        format_hint: Option<&str>,
-    ) -> Result<(Vec<[f32; 3]>, SurfaceIndices), ()> {
-        match format_hint {
-            Some("obj") => Ok(load_obj_buf(reader, &mut self.buffer, 0)),
-            Some("off") => Ok(load_off_buf(reader, &mut self.buffer, 0)),
-            Some("ply") => Ok(load_ply_buf(reader, &mut self.buffer, 0)),
-            Some("stl") => Ok(load_stl_buf(reader, &mut self.buffer, 0)),
-            _ => {
-                let read = reader.read(&mut self.buffer).map_err(|_| ())?;
-                match self.buffer.first_chunk::<3>().ok_or(())? {
-                    b"OFF" => Ok(load_off_buf(reader, &mut self.buffer, read)),
-                    b"ply" => Ok(load_ply_buf(reader, &mut self.buffer, read)),
-                    _ => Err(()),
-                }
+pub fn parse_reader<B: BufRead, const BUFFER_SIZE: usize>(
+    reader: &mut B,
+    format_hint: Option<&str>,
+) -> Result<(Vec<[f32; 3]>, SurfaceIndices), ()> {
+    let mut buffer = [0; BUFFER_SIZE];
+    match format_hint {
+        Some("obj") => load_obj_buf(reader, &mut buffer, 0),
+        Some("off") => load_off_buf(reader, &mut buffer, 0),
+        Some("ply") => load_ply_buf(reader, &mut buffer, 0),
+        Some("stl") => load_stl_buf(reader, &mut buffer, 0),
+        _ => {
+            let read = reader.read(&mut buffer).map_err(|_| ())?;
+            match buffer.first_chunk::<3>().ok_or(())? {
+                b"OFF" => load_off_buf(reader, &mut buffer, read),
+                b"ply" => load_ply_buf(reader, &mut buffer, read),
+                _ => Err(()),
             }
         }
     }

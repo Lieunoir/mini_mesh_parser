@@ -28,31 +28,30 @@ fn parse_int(data: &[u8], pos_sz: u32) -> Option<(u32, usize)> {
 }
 
 fn parse_face_indices(
-    //face_str: SplitAsciiblankspace,
     face_str: &[u8],
     mode: &mut FaceMode,
     indices: &mut Vec<u32>,
     strides: &mut Vec<u8>,
     pos_sz: u32,
-) -> usize {
+) -> Option<usize> {
     let mut data = face_str;
     let mut off = 0;
 
-    off += data.iter().position(|&c| c != b' ').unwrap();
+    off += data.iter().position(|&c| c != b' ')?;
     data = &face_str[off..];
-    let (f0, end) = parse_int(data, pos_sz).unwrap();
+    let (f0, end) = parse_int(data, pos_sz)?;
     off += end;
     data = &face_str[off..];
-    off += data.iter().position(|&c| c == b' ').unwrap() + 1;
+    off += data.iter().position(|&c| c == b' ')? + 1;
     data = &face_str[off..];
-    off += data.iter().position(|&c| c != b' ').unwrap();
+    off += data.iter().position(|&c| c != b' ')?;
     data = &face_str[off..];
-    let (f1, end) = parse_int(data, pos_sz).unwrap();
+    let (f1, end) = parse_int(data, pos_sz)?;
     off += end;
     data = &face_str[off..];
-    off += data.iter().position(|&c| c == b' ').unwrap() + 1;
+    off += data.iter().position(|&c| c == b' ')? + 1;
     data = &face_str[off..];
-    off += data.iter().position(|&c| c != b' ').unwrap();
+    off += data.iter().position(|&c| c != b' ')?;
     data = &face_str[off..];
     // let (f2, end) = parse_int(data, pos_sz).unwrap();
     // off += end;
@@ -75,23 +74,18 @@ fn parse_face_indices(
             }
         }
 
-        endword += data[endword..].iter().position(|&c| c != b' ').unwrap();
+        endword += data[endword..].iter().position(|&c| c != b' ')?;
 
         off += endword;
         if data[endword] == b'\r' || data[endword] == b'\n' {
             off += data[endword..]
                 .iter()
-                .position(|&c| c != b' ' && c != b'\r')
-                .unwrap();
+                .position(|&c| c != b' ' && c != b'\r')?;
             break;
         }
         data = &data[endword..];
     }
-    //if data.len() > 0 {
-    //    let v_i = VertexIndices::parse_pos(data, pos_sz).unwrap();
-    //    indices.push(v_i);
-    //    i += 1;
-    //}
+
     if i >= 3 && *mode != FaceMode::Polygon {
         if *mode == FaceMode::Undetermined {
             if i == 3 {
@@ -116,14 +110,14 @@ fn parse_face_indices(
     if i >= 3 && *mode == FaceMode::Polygon {
         strides.push(i as u8);
     }
-    off
+    Some(off)
 }
 
 pub fn load_obj_buf<B: BufRead, const BUFFER_SIZE: usize>(
     reader: &mut B,
     buf: &mut [u8; BUFFER_SIZE],
     mut start: usize,
-) -> (Vec<[f32; 3]>, SurfaceIndices) {
+) -> Result<(Vec<[f32; 3]>, SurfaceIndices), ()> {
     let mut vertices = Vec::new();
     let mut mode = FaceMode::Undetermined;
     let mut indices: Vec<u32> = Vec::new();
@@ -152,7 +146,7 @@ pub fn load_obj_buf<B: BufRead, const BUFFER_SIZE: usize>(
                         vertices.push(pos);
                         i += off + 2;
                     }
-                    _ => i += find_newline(&buf[i + 1..]).unwrap() + 2,
+                    _ => i += find_newline(&buf[i + 1..]).ok_or(())? + 2,
                 },
                 b'f' => {
                     if !encountered_f {
@@ -166,10 +160,11 @@ pub fn load_obj_buf<B: BufRead, const BUFFER_SIZE: usize>(
                         &mut indices,
                         &mut strides,
                         vertices.len() as u32,
-                    );
+                    )
+                    .ok_or(())?;
                     i += 2 + off;
                 }
-                _ => i += find_newline(&buf[i..]).unwrap() + 1,
+                _ => i += find_newline(&buf[i..]).ok_or(())? + 1,
             }
         }
 
@@ -183,5 +178,5 @@ pub fn load_obj_buf<B: BufRead, const BUFFER_SIZE: usize>(
     } else {
         into_chunks::<3>(indices).into()
     };
-    (vertices, indices)
+    Ok((vertices, indices))
 }

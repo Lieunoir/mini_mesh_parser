@@ -38,14 +38,14 @@ fn parse_face_indices(
     indices: &mut Vec<u32>,
     strides: &mut Vec<u8>,
     nf: usize,
-) -> usize {
+) -> Option<usize> {
     let mut off = 0;
     let mut data = face_str;
     while data.len() > 0 && data[0] == b' ' {
         data = &data[1..];
     }
 
-    let (face_len, mut endword) = parse_int(data).unwrap();
+    let (face_len, mut endword) = parse_int(data)?;
     if face_len >= 3 && *mode != FaceMode::Polygon {
         if *mode == FaceMode::Undetermined {
             if face_len == 3 {
@@ -78,7 +78,7 @@ fn parse_face_indices(
     data = &data[endword..];
 
     for _ in 0..face_len {
-        let (v, mut endword) = parse_int(data).unwrap();
+        let (v, mut endword) = parse_int(data)?;
         indices.push(v);
         while endword < data.len() && data[endword] == b' ' {
             endword += 1;
@@ -86,23 +86,23 @@ fn parse_face_indices(
         off += endword;
         data = &data[endword..];
     }
-    off
+    Some(off)
 }
 
-fn parse_header(buf: &[u8]) -> (usize, usize, usize) {
-    let (nv, mut endword) = parse_int(buf).unwrap();
+fn parse_header(buf: &[u8]) -> Option<(usize, usize, usize)> {
+    let (nv, mut endword) = parse_int(buf)?;
     while endword < buf.len() && buf[endword] == b' ' {
         endword += 1;
     }
-    let (nf, endword) = parse_int(&buf[endword..]).unwrap();
-    (nv as usize, nf as usize, endword)
+    let (nf, endword) = parse_int(&buf[endword..])?;
+    Some((nv as usize, nf as usize, endword))
 }
 
 pub fn load_off_buf<B: BufRead, const BUFFER_SIZE: usize>(
     reader: &mut B,
     buf: &mut [u8; BUFFER_SIZE],
     mut start: usize,
-) -> (Vec<[f32; 3]>, SurfaceIndices) {
+) -> Result<(Vec<[f32; 3]>, SurfaceIndices), ()> {
     let mut line_number = 0;
     let mut nv = 0;
     let mut nf = 0;
@@ -129,15 +129,15 @@ pub fn load_off_buf<B: BufRead, const BUFFER_SIZE: usize>(
             if let Some(line_start) = get_line_start(&buf[i..]) {
                 i += line_start;
                 if line_number == 0 {
-                    if buf.split_first_chunk::<3>().unwrap().0 == b"OFF" {
-                        i += find_newline(&buf[3..]).unwrap() + 4;
+                    if buf.split_first_chunk::<3>().ok_or(())?.0 == b"OFF" {
+                        i += find_newline(&buf[3..]).ok_or(())? + 4;
                     }
                     let endword;
-                    (nv, nf, endword) = parse_header(&buf[i..]);
+                    (nv, nf, endword) = parse_header(&buf[i..]).ok_or(())?;
                     vertices.reserve(nv);
                     indices.reserve(nv + nf - 2);
                     line_number += 1;
-                    i += find_newline(&buf[i + endword..]).unwrap() + endword + 1;
+                    i += find_newline(&buf[i + endword..]).ok_or(())? + endword + 1;
                 } else if line_number < nv + 1 {
                     let (off, pos) = unsafe { parse_float3(&buf[i..]) };
                     line_number += 1;
@@ -145,14 +145,15 @@ pub fn load_off_buf<B: BufRead, const BUFFER_SIZE: usize>(
                     i += off + 1;
                 } else if line_number < 1 + nv + nf {
                     let off =
-                        parse_face_indices(&buf[i..], &mut mode, &mut indices, &mut strides, nf);
+                        parse_face_indices(&buf[i..], &mut mode, &mut indices, &mut strides, nf)
+                            .ok_or(())?;
                     line_number += 1;
                     i += 1 + off;
                 } else {
                     break 'outer;
                 }
             } else {
-                i += find_newline(&buf[1..]).unwrap() + 1;
+                i += find_newline(&buf[1..]).ok_or(())? + 1;
             }
         }
 
@@ -167,5 +168,5 @@ pub fn load_off_buf<B: BufRead, const BUFFER_SIZE: usize>(
     } else {
         into_chunks::<3>(indices).into()
     };
-    (vertices, indices)
+    Ok((vertices, indices))
 }
