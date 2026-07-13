@@ -7,16 +7,12 @@ fn find_newline(slice: &[u8]) -> Option<usize> {
 }
 
 fn get_line_start(slice: &[u8]) -> Option<usize> {
-    for (i, char) in slice.iter().enumerate() {
-        if *char != b' ' {
-            if *char == b'#' || *char == b'\n' || *char == b'\r' {
-                return None;
-            } else {
-                return Some(i);
-            }
-        }
+    let i = slice.iter().position(|&c| c != b' ')?;
+    if slice[i] == b'#' {
+        return None;
+    } else {
+        return Some(i);
     }
-    None
 }
 
 fn parse_int(data: &[u8]) -> Option<(u32, usize)> {
@@ -41,12 +37,9 @@ fn parse_face_indices(
 ) -> Option<usize> {
     let mut off = 0;
     let mut data = face_str;
-    while off < data.len() && data[off] == b' ' {
-        off += 1;
-    }
-    data = &data[off..];
-
+    // get_line already stripped blanks
     let (face_len, mut endword) = parse_int(data)?;
+    endword += 1;
 
     if face_len < 3 {
         return None;
@@ -77,30 +70,27 @@ fn parse_face_indices(
         strides.push(face_len as u8);
     }
 
-    while endword < data.len() && data[endword] == b' ' {
-        endword += 1;
-    }
+    endword += data[endword..].iter().position(|&c| c != b' ')?;
     off += endword;
     data = &data[endword..];
+
     let (v, mut endword) = parse_int(data)?;
+    endword += 1;
     indices.push(v);
-    while endword < data.len() && data[endword] == b' ' {
-        endword += 1;
-    }
+    endword += data[endword..].iter().position(|&c| c != b' ')?;
     off += endword;
     data = &data[endword..];
+
     let (v, mut endword) = parse_int(data)?;
+    endword += 1;
     indices.push(v);
-    while endword < data.len() && data[endword] == b' ' {
-        endword += 1;
-    }
+    endword += data[endword..].iter().position(|&c| c != b' ')?;
     off += endword;
     data = &data[endword..];
+
     let (v, mut endword) = parse_int(data)?;
     indices.push(v);
-    while endword < data.len() && data[endword] == b' ' {
-        endword += 1;
-    }
+    endword += data[endword..].iter().position(|&c| c != b' ')?;
     off += endword;
     data = &data[endword..];
 
