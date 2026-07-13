@@ -50,9 +50,9 @@ pub fn load_stl_buf<B: BufRead, const BUFFER_SIZE: usize>(
                     chunk[off + 11],
                 ]);
                 vertices.push([vx, vy, vz]);
-                if vertices.len() * 3 == nf as usize {
-                    break 'outer;
-                }
+            }
+            if vertices.len() / 3 == nf as usize {
+                break 'outer;
             }
         }
 
@@ -62,7 +62,7 @@ pub fn load_stl_buf<B: BufRead, const BUFFER_SIZE: usize>(
         buf.copy_within(last..end, 0);
     }
 
-    if vertices.len() * 3 != nf as usize {
+    if vertices.len() / 3 != nf as usize {
         return Err(());
     }
 

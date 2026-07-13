@@ -160,3 +160,75 @@ pub enum SurfaceIndices {
     Quads(Vec<[u32; 4]>),
     Polygons(Vec<u32>, Vec<u32>),
 }
+
+#[cfg(test)]
+mod tests {
+    use std::path::PathBuf;
+
+    // Note this useful idiom: importing names from outer (for mod tests) scope.
+    use super::parse_file;
+
+    #[test]
+    fn test_obj() {
+        for path in [
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("assets/armadillo.obj"),
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("assets/bob.obj"),
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("assets/face.obj"),
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("assets/spot.obj"),
+        ] {
+            assert!(matches!(parse_file::<65536>(&path), Ok(_)));
+        }
+    }
+
+    #[test]
+    fn test_obj_quad() {
+        for path in [PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("assets/dragon-surfel.obj")] {
+            assert!(matches!(parse_file::<65536>(&path), Ok(_)));
+        }
+    }
+
+    #[test]
+    fn test_obj_poly() {
+        for path in [PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("assets/bimbaPoly.obj")] {
+            assert!(matches!(parse_file::<65536>(&path), Ok(_)));
+        }
+    }
+
+    #[test]
+    fn test_off() {
+        for path in [
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("assets/beetle.off"),
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("assets/rocker-arm.off"),
+        ] {
+            assert!(matches!(parse_file::<65536>(&path), Ok(_)));
+        }
+    }
+
+    #[test]
+    fn test_stl() {
+        for path in [PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("assets/bunny.stl")] {
+            assert!(matches!(parse_file::<65536>(&path), Ok(_)));
+        }
+    }
+
+    #[test]
+    fn test_ply() {
+        for path in [
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("assets/cube1.ply"),
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("assets/cube2.ply"),
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("assets/bunny.ply"),
+        ] {
+            assert!(matches!(parse_file::<65536>(&path), Ok(_)));
+        }
+    }
+
+    #[test]
+    fn test_unknown() {
+        for path in [
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("assets/bunny.txt"),
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("assets/beetle.txt"),
+        ] {
+            assert!(matches!(parse_file::<65536>(&path), Ok(_)));
+        }
+    }
+}
