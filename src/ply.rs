@@ -331,7 +331,7 @@ fn parse_header(
     head: &mut HeadingInfos,
     section: &mut HeaderSection,
 ) -> Result<bool, ()> {
-    while let Some((off, line_end)) = get_next_line_start_and_end(data, cursor) {
+    while let Some((off, line_end)) = get_next_line_start_and_end_header(data, cursor) {
         data = &data[off..];
         *cursor += line_end;
         match section {
@@ -479,7 +479,7 @@ fn parse_header(
                         if head.nv != 0 {
                             head.v_first_over_f = true;
                         }
-                        head.nf = parse_int(&s[6..]).ok_or(())?.0;
+                        head.nf = parse_int(&s[5..]).ok_or(())?.0;
                         *section = HeaderSection::Face;
                     } else if s[..].starts_with(b"vertex ") {
                         if head.nv != 0 {
@@ -527,7 +527,7 @@ fn parse_header(
     Ok(false)
 }
 
-fn get_next_line_start_and_end(data: &[u8], cursor: &mut usize) -> Option<(usize, usize)> {
+fn get_next_line_start_and_end_header(data: &[u8], cursor: &mut usize) -> Option<(usize, usize)> {
     let mut i = 0;
     while i < data.len() {
         let char = data[i];
@@ -555,6 +555,13 @@ fn get_next_line_start_and_end(data: &[u8], cursor: &mut usize) -> Option<(usize
     None
 }
 
+fn get_next_line_start_and_end(data: &[u8], cursor: &mut usize) -> Option<(usize, usize)> {
+    let i = data.iter().position(|&c| c != b' ')?;
+    let off = data[i..].iter().position(|&c| c == b'\n')?;
+    *cursor += i;
+    Some((i, off + 1))
+}
+
 fn parse_ascii(
     mut data: &[u8],
     cursor: &mut usize,
@@ -572,10 +579,12 @@ fn parse_ascii(
             {
                 if data[i] == b'\n' {
                     *line += 1;
+                    *cursor += i;
+                    data = &data[i..];
+                    i = 0;
                 }
                 i += 1;
             }
-            *cursor += i;
             if i == data.len() {
                 return Ok(false);
             }
@@ -682,10 +691,12 @@ fn parse_ascii(
                 {
                     if data[i] == b'\n' {
                         *line += 1;
+                        *cursor += i;
+                        data = &data[i..];
+                        i = 0;
                     }
                     i += 1;
                 }
-                *cursor += i;
                 if i == data.len() {
                     return Ok(false);
                 }
