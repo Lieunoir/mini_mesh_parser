@@ -1,3 +1,5 @@
+#![doc = include_str!("../README.md")]
+
 use crate::{obj::load_obj_buf, off::load_off_buf, ply::load_ply_buf, stl::load_stl_buf};
 use std::{
     fs::File,
@@ -11,16 +13,18 @@ pub mod off;
 pub mod ply;
 pub mod stl;
 
-pub fn parse_file<const BUFFER_SIZE: usize>(
+/// Parse a surface from a file
+pub fn load_mesh_file<const BUFFER_SIZE: usize>(
     file_name: impl AsRef<Path>,
 ) -> Result<(Vec<[f32; 3]>, SurfaceIndices), ()> {
     let file = File::open(file_name.as_ref()).map_err(|_| ())?;
     let mut reader = BufReader::new(file);
     let format_hint = file_name.as_ref().extension().and_then(|s| s.to_str());
-    parse_reader::<_, BUFFER_SIZE>(&mut reader, format_hint)
+    load_mesh_reader::<_, BUFFER_SIZE>(&mut reader, format_hint)
 }
 
-pub fn parse_reader<B: BufRead, const BUFFER_SIZE: usize>(
+/// Parse a surface from a reader
+pub fn load_mesh_reader<B: BufRead, const BUFFER_SIZE: usize>(
     reader: &mut B,
     format_hint: Option<&str>,
 ) -> Result<(Vec<[f32; 3]>, SurfaceIndices), ()> {
@@ -82,7 +86,7 @@ fn find_blank_space(slice: &[u8]) -> Option<usize> {
 }
 
 // Taken from std https://github.com/rust-lang/rust/issues/142137
-pub fn into_chunks<const N: usize>(mut this: Vec<u32>) -> Vec<[u32; N]> {
+fn into_chunks<const N: usize>(mut this: Vec<u32>) -> Vec<[u32; N]> {
     const {
         assert!(N != 0, "chunk size must be greater than zero");
     }
@@ -155,6 +159,7 @@ impl From<(Vec<u32>, Vec<u8>)> for SurfaceIndices {
     }
 }
 
+/// Various indices representations
 pub enum SurfaceIndices {
     Triangles(Vec<[u32; 3]>),
     Quads(Vec<[u32; 4]>),
@@ -166,7 +171,7 @@ mod tests {
     use std::path::PathBuf;
 
     // Note this useful idiom: importing names from outer (for mod tests) scope.
-    use super::parse_file;
+    use super::load_mesh_file;
 
     #[test]
     fn test_obj() {
@@ -176,21 +181,21 @@ mod tests {
             PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("assets/face.obj"),
             PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("assets/spot.obj"),
         ] {
-            assert!(matches!(parse_file::<65536>(&path), Ok(_)));
+            assert!(matches!(load_mesh_file::<65536>(&path), Ok(_)));
         }
     }
 
     #[test]
     fn test_obj_quad() {
         for path in [PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("assets/dragon-surfel.obj")] {
-            assert!(matches!(parse_file::<65536>(&path), Ok(_)));
+            assert!(matches!(load_mesh_file::<65536>(&path), Ok(_)));
         }
     }
 
     #[test]
     fn test_obj_poly() {
         for path in [PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("assets/bimbaPoly.obj")] {
-            assert!(matches!(parse_file::<65536>(&path), Ok(_)));
+            assert!(matches!(load_mesh_file::<65536>(&path), Ok(_)));
         }
     }
 
@@ -200,14 +205,14 @@ mod tests {
             PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("assets/beetle.off"),
             PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("assets/rocker-arm.off"),
         ] {
-            assert!(matches!(parse_file::<65536>(&path), Ok(_)));
+            assert!(matches!(load_mesh_file::<65536>(&path), Ok(_)));
         }
     }
 
     #[test]
     fn test_stl() {
         for path in [PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("assets/bunny.stl")] {
-            assert!(matches!(parse_file::<65536>(&path), Ok(_)));
+            assert!(matches!(load_mesh_file::<65536>(&path), Ok(_)));
         }
     }
 
@@ -218,7 +223,7 @@ mod tests {
             PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("assets/cube2.ply"),
             PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("assets/bunny.ply"),
         ] {
-            assert!(matches!(parse_file::<65536>(&path), Ok(_)));
+            assert!(matches!(load_mesh_file::<65536>(&path), Ok(_)));
         }
     }
 
@@ -228,7 +233,7 @@ mod tests {
             PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("assets/bunny.txt"),
             PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("assets/beetle.txt"),
         ] {
-            assert!(matches!(parse_file::<65536>(&path), Ok(_)));
+            assert!(matches!(load_mesh_file::<65536>(&path), Ok(_)));
         }
     }
 }

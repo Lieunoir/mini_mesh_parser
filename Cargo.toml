@@ -1,7 +1,12 @@
 [package]
-name = "mesh_parsers"
+name = "mini_mesh_parser"
 version = "0.1.0"
 edition = "2024"
+keywords = ["geometry", "mesh", "surface"]
+license = "MIT"
+description = "Minimalistic surface mesh parser "
+repository = "https://github.com/Lieunoir/deuxfleurs"
+exclude = ["assets/*"]
 
 [dependencies]
 
