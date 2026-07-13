@@ -375,7 +375,7 @@ fn parse_header(
             },
             HeaderSection::Vertex => match data.split_first_chunk::<8>() {
                 Some((b"element ", s)) => {
-                    if s[..].starts_with(b"vertex ") {
+                    if s.starts_with(b"vertex ") {
                         return Err(());
                     } else if s[..].starts_with(b"face ") {
                         if head.nf != 0 {
@@ -555,13 +555,6 @@ fn get_next_line_start_and_end_header(data: &[u8], cursor: &mut usize) -> Option
     None
 }
 
-fn get_next_line_start_and_end(data: &[u8], cursor: &mut usize) -> Option<(usize, usize)> {
-    let i = data.iter().position(|&c| c != b' ')?;
-    let off = data[i..].iter().position(|&c| c == b'\n')?;
-    *cursor += i;
-    Some((i, off + 1))
-}
-
 fn parse_ascii(
     mut data: &[u8],
     cursor: &mut usize,
@@ -572,140 +565,140 @@ fn parse_ascii(
     strides: &mut Vec<u8>,
     mode: &mut FaceMode,
 ) -> Result<bool, ()> {
-    loop {
+    let mut last = data.len() - 1;
+    while data[last] != b'\n' && last > 0 {
+        last -= 1;
+    }
+    if data[last] != b'\n' {
+        return Err(());
+    }
+    last += 1;
+    data = &data[..last];
+    *cursor += last;
+
+    while !data.is_empty() {
         if (*line as u32) < infos.useless_before {
-            let mut i = 0;
-            while (*line as u32) < u32::min(infos.face_start, infos.vertex_start) && i < data.len()
+            while (*line as u32) < u32::min(infos.face_start, infos.vertex_start)
+                && !data.is_empty()
             {
-                if data[i] == b'\n' {
+                if data[0] == b'\n' {
                     *line += 1;
-                    *cursor += i;
-                    data = &data[i..];
-                    i = 0;
                 }
-                i += 1;
+                data = &data[1..];
             }
-            if i == data.len() {
-                return Ok(false);
-            }
-            data = &data[i..];
         } else {
             if (*line as u32) >= infos.face_start && (*line as u32) < infos.face_start + infos.nf {
-                while (*line as u32) < infos.face_start + infos.nf {
-                    if let Some((off, line_end)) = get_next_line_start_and_end(data, cursor) {
-                        *cursor += line_end;
-                        data = &data[off..];
-
-                        let mut i = 0;
-                        for typ in &infos.i_stride[..infos.i_stride_i as usize] {
-                            i += typ.skip_ascii(&data[i..]).ok_or(())?;
-                        }
-
-                        let (face_len, endword) = parse_int(&data[i..]).ok_or(())?;
-                        i += endword;
-                        if face_len >= 3 && *mode != FaceMode::Polygon {
-                            if *mode == FaceMode::Undetermined {
-                                if face_len == 3 {
-                                    *mode = FaceMode::Triangle;
-                                } else if face_len == 4 {
-                                    *mode = FaceMode::Quad;
-                                } else {
-                                    *mode = FaceMode::Polygon;
-                                }
-                            } else if *mode == FaceMode::Triangle && face_len != 3 {
-                                *strides = vec![3; indices.len() / 3];
-                                strides.reserve(infos.nf as usize - strides.len());
-                                *mode = FaceMode::Polygon;
-                            } else if *mode == FaceMode::Quad && face_len != 4 {
-                                *strides = vec![4; indices.len() / 4];
-                                *mode = FaceMode::Polygon;
-                                strides.reserve(infos.nf as usize - strides.len());
-                            }
-                        }
-                        if face_len >= 3 && *mode == FaceMode::Polygon {
-                            strides.push(face_len as u8);
-                        }
-
-                        while i < data.len() && data[i] == b' ' {
-                            i += 1;
-                        }
-
-                        for j in 0..face_len {
-                            let (v, endword) = parse_int(&data[i..]).ok_or(())?;
-                            indices.push(v);
-                            i += endword + 1;
-                            if j != face_len - 1 {
-                                i += data[i..].iter().position(|&c| c != b' ').ok_or(())?;
-                            }
-                        }
-                        *line += 1;
-                        data = &data[line_end..];
-                    } else {
-                        return Ok(false);
+                while (*line as u32) < infos.face_start + infos.nf && !data.is_empty() {
+                    let mut i = 0;
+                    for typ in &infos.i_stride[..infos.i_stride_i as usize] {
+                        i += typ.skip_ascii(&data[i..]).ok_or(())?;
                     }
+
+                    let (face_len, endword) = parse_int(&data[i..]).ok_or(())?;
+                    i += endword + 1;
+                    i += data[i..].iter().position(|&c| c != b' ').ok_or(())?;
+
+                    if face_len < 3 {
+                        return Err(());
+                    }
+
+                    if *mode != FaceMode::Polygon {
+                        if *mode == FaceMode::Undetermined {
+                            if face_len == 3 {
+                                *mode = FaceMode::Triangle;
+                            } else if face_len == 4 {
+                                *mode = FaceMode::Quad;
+                            } else {
+                                *mode = FaceMode::Polygon;
+                            }
+                        } else if *mode == FaceMode::Triangle && face_len != 3 {
+                            *strides = vec![3; indices.len() / 3];
+                            strides.reserve(infos.nf as usize - strides.len());
+                            *mode = FaceMode::Polygon;
+                        } else if *mode == FaceMode::Quad && face_len != 4 {
+                            *strides = vec![4; indices.len() / 4];
+                            *mode = FaceMode::Polygon;
+                            strides.reserve(infos.nf as usize - strides.len());
+                        }
+                    }
+                    if *mode == FaceMode::Polygon {
+                        strides.push(face_len as u8);
+                    }
+
+                    let (v, endword) = parse_int(&data[i..]).ok_or(())?;
+                    indices.push(v);
+                    i += endword + 1;
+                    i += data[i..].iter().position(|&c| c != b' ').ok_or(())?;
+
+                    let (v, endword) = parse_int(&data[i..]).ok_or(())?;
+                    indices.push(v);
+                    i += endword + 1;
+                    i += data[i..].iter().position(|&c| c != b' ').ok_or(())?;
+
+                    for _ in 0..face_len - 3 {
+                        let (v, endword) = parse_int(&data[i..]).ok_or(())?;
+                        indices.push(v);
+                        i += endword + 1;
+                        i += data[i..].iter().position(|&c| c != b' ').ok_or(())?;
+                    }
+
+                    let (v, endword) = parse_int(&data[i..]).ok_or(())?;
+                    indices.push(v);
+                    i += endword;
+                    i += data[i..].iter().position(|&c| c == b'\n').ok_or(())? + 1;
+
+                    data = &data[i..];
+                    *line += 1;
                 }
             } else if (*line as u32) >= infos.vertex_start
                 && (*line as u32) < infos.vertex_start + infos.nv
             {
-                while (*line as u32) < infos.vertex_start + infos.nv {
-                    if let Some((off, line_end)) = get_next_line_start_and_end(data, cursor) {
-                        *cursor += line_end;
-                        data = &data[off..];
+                while (*line as u32) < infos.vertex_start + infos.nv && !data.is_empty() {
+                    let mut res = [0., 0., 0.];
+                    let max_i = infos
+                        .v_x_stride_i
+                        .max(infos.v_y_stride_i)
+                        .max(infos.v_z_stride_i)
+                        + 1;
+                    let mut i = 0;
 
-                        let mut res = [0., 0., 0.];
-                        let max_i = infos
-                            .v_x_stride_i
-                            .max(infos.v_y_stride_i)
-                            .max(infos.v_z_stride_i)
-                            + 1;
-                        let mut i = 0;
-
-                        for (index, typ) in infos.v_stride[..max_i as usize].iter().enumerate() {
-                            if index == infos.v_x_stride_i as usize {
-                                let (f, acc) = unsafe { parse_float(&data[i..]).ok_or(())? };
-                                res[0] = f;
-                                i += acc;
-                            } else if index == infos.v_y_stride_i as usize {
-                                let (f, acc) = unsafe { parse_float(&data[i..]).ok_or(())? };
-                                res[1] = f;
-                                i += acc;
-                            } else if index == infos.v_z_stride_i as usize {
-                                let (f, acc) = unsafe { parse_float(&data[i..]).ok_or(())? };
-                                res[2] = f;
-                                i += acc;
-                            } else {
-                                i += typ.skip_ascii(&data[i..]).ok_or(())?;
-                            }
+                    for (index, typ) in infos.v_stride[..max_i as usize].iter().enumerate() {
+                        if index == infos.v_x_stride_i as usize {
+                            let (f, acc) = unsafe { parse_float(&data[i..]).ok_or(())? };
+                            res[0] = f;
+                            i += acc;
+                        } else if index == infos.v_y_stride_i as usize {
+                            let (f, acc) = unsafe { parse_float(&data[i..]).ok_or(())? };
+                            res[1] = f;
+                            i += acc;
+                        } else if index == infos.v_z_stride_i as usize {
+                            let (f, acc) = unsafe { parse_float(&data[i..]).ok_or(())? };
+                            res[2] = f;
+                            i += acc;
+                        } else {
+                            i += typ.skip_ascii(&data[i..]).ok_or(())?;
                         }
-                        vertices.push(res);
-                        *line += 1;
-                        data = &data[line_end..];
-                    } else {
-                        return Ok(false);
                     }
+                    vertices.push(res);
+                    *line += 1;
+                    i += data[i..].iter().position(|&c| c == b'\n').ok_or(())? + 1;
+                    data = &data[i..];
                 }
             } else if (*line as u32) < u32::max(infos.vertex_start, infos.face_start) {
-                let mut i = 0;
                 while (*line as u32) < u32::max(infos.face_start, infos.vertex_start)
-                    && i < data.len()
+                    && !data.is_empty()
                 {
-                    if data[i] == b'\n' {
+                    if data[0] == b'\n' {
                         *line += 1;
-                        *cursor += i;
-                        data = &data[i..];
-                        i = 0;
                     }
-                    i += 1;
+                    data = &data[1..];
                 }
-                if i == data.len() {
-                    return Ok(false);
-                }
-                data = &data[i..];
             } else {
                 return Ok(true);
             }
         }
     }
+    Ok(false)
 }
 
 fn skip_elem_binary(
@@ -839,12 +832,12 @@ fn parse_face_binary(
             }
         } else if *mode == FaceMode::Triangle && face_len != 3 {
             *strides = vec![3; (indices.len() - face_len as usize) / 3];
-            strides.reserve(3 * infos.nf as usize - strides.len());
+            strides.reserve(infos.nf as usize - strides.len());
             *mode = FaceMode::Polygon;
         } else if *mode == FaceMode::Quad && face_len != 4 {
             *strides = vec![4; (indices.len() - face_len as usize) / 4];
             *mode = FaceMode::Polygon;
-            strides.reserve(2 * infos.nf as usize - strides.len());
+            strides.reserve(infos.nf as usize - strides.len());
         }
     }
     if *mode == FaceMode::Polygon {

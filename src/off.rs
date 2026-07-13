@@ -88,21 +88,20 @@ fn parse_face_indices(
     off += endword;
     data = &data[endword..];
 
+    for _ in 0..face_len - 3 {
+        let (v, mut endword) = parse_int(data)?;
+        endword += 1;
+        indices.push(v);
+        endword += data[endword..].iter().position(|&c| c != b' ')?;
+        off += endword;
+        data = &data[endword..];
+    }
+
     let (v, mut endword) = parse_int(data)?;
     indices.push(v);
     endword += data[endword..].iter().position(|&c| c != b' ')?;
     off += endword;
-    data = &data[endword..];
 
-    for _ in 0..face_len - 3 {
-        let (v, mut endword) = parse_int(data)?;
-        indices.push(v);
-        while endword < data.len() && data[endword] == b' ' {
-            endword += 1;
-        }
-        off += endword;
-        data = &data[endword..];
-    }
     Some(off)
 }
 
