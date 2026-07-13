@@ -1002,6 +1002,10 @@ where
                         parse_header(data, &mut last, head, &mut header_parsing_state).unwrap();
                     let advanced = last - old_last;
                     if done {
+                        let nv = head.nv as usize;
+                        let nf = head.nf as usize;
+                        vertices.reserve(nv);
+                        indices.reserve(nv + nf - 2);
                         parsing_state = parsing_state.finalize().unwrap();
                         data = &data[advanced..];
                     } else {

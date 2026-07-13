@@ -153,7 +153,7 @@ where
                     let endword;
                     (nv, nf, endword) = parse_header(&buf[i..]);
                     vertices.reserve(nv);
-                    indices.reserve(3 * nf);
+                    indices.reserve(nv + nf - 2);
                     line_number += 1;
                     i += find_newline(&buf[i + endword..]).unwrap() + endword + 1;
                 } else if line_number < nv + 1 {
