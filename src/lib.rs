@@ -1,9 +1,53 @@
-use std::str::FromStr;
+use crate::{obj::load_obj_buf, off::load_off_buf, ply::load_ply_buf, stl::load_stl_buf};
+use std::{
+    fs::File,
+    io::{BufRead, BufReader},
+    path::Path,
+    str::FromStr,
+};
 
 pub mod obj;
 pub mod off;
 pub mod ply;
 pub mod stl;
+
+pub struct SurfaceLoader<const BUFFER_SIZE: usize = 65536> {
+    buffer: [u8; BUFFER_SIZE],
+}
+
+impl<const BUFFER_SIZE: usize> SurfaceLoader<BUFFER_SIZE> {
+    pub fn from_file(
+        self,
+        file_name: impl AsRef<Path>,
+    ) -> Result<(Vec<[f32; 3]>, SurfaceIndices), ()> {
+        let file = File::open(file_name.as_ref()).map_err(|_| ())?;
+        let mut reader = BufReader::new(file);
+        let format_hint = file_name.as_ref().extension().map(|s| s.to_str()).flatten();
+
+        self.from_buffer(&mut reader, format_hint)
+    }
+
+    pub fn from_buffer<B: BufRead>(
+        mut self,
+        reader: &mut B,
+        format_hint: Option<&str>,
+    ) -> Result<(Vec<[f32; 3]>, SurfaceIndices), ()> {
+        match format_hint {
+            Some("obj") => Ok(load_obj_buf(reader, &mut self.buffer, 0)),
+            Some("off") => Ok(load_off_buf(reader, &mut self.buffer, 0)),
+            Some("ply") => Ok(load_ply_buf(reader, &mut self.buffer, 0)),
+            Some("stl") => Ok(load_stl_buf(reader, &mut self.buffer, 0)),
+            _ => {
+                let read = reader.read(&mut self.buffer).map_err(|_| ())?;
+                match self.buffer.first_chunk::<3>().ok_or(())? {
+                    b"OFF" => Ok(load_off_buf(reader, &mut self.buffer, read)),
+                    b"ply" => Ok(load_ply_buf(reader, &mut self.buffer, read)),
+                    _ => Err(()),
+                }
+            }
+        }
+    }
+}
 
 unsafe fn parse_float3(slice: &[u8]) -> (usize, [f32; 3]) {
     unsafe {

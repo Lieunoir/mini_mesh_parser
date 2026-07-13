@@ -1,8 +1,4 @@
-use std::{
-    fs::File,
-    io::{BufRead, BufReader},
-    path::Path,
-};
+use std::io::BufRead;
 
 use crate::{FaceMode, SurfaceIndices, into_chunks, parse_float3};
 
@@ -123,30 +119,16 @@ fn parse_face_indices(
     off
 }
 
-pub fn load_obj(file_name: impl AsRef<Path>) -> (Vec<[f32; 3]>, SurfaceIndices) {
-    let file = match File::open(file_name.as_ref()) {
-        Ok(f) => f,
-        Err(_e) => {
-            panic!()
-            //return Err(LoadError::OpenFileFailed);
-        }
-    };
-    let mut reader = BufReader::new(file);
-    load_obj_buf(&mut reader)
-}
-
-pub fn load_obj_buf<B>(reader: &mut B) -> (Vec<[f32; 3]>, SurfaceIndices)
-where
-    B: BufRead,
-{
+pub fn load_obj_buf<B: BufRead, const BUFFER_SIZE: usize>(
+    reader: &mut B,
+    buf: &mut [u8; BUFFER_SIZE],
+    mut start: usize,
+) -> (Vec<[f32; 3]>, SurfaceIndices) {
     let mut vertices = Vec::new();
     let mut mode = FaceMode::Undetermined;
     let mut indices: Vec<u32> = Vec::new();
     let mut strides: Vec<u8> = Vec::new();
-    const BUFFER_SIZE: usize = 65536;
-    let mut buf = [0; BUFFER_SIZE];
     let mut encountered_f = false;
-    let mut start = 0;
     while let Ok(size) = reader.read(&mut buf[start..]) {
         if size == 0 && start == 0 {
             break;
@@ -202,37 +184,4 @@ where
         into_chunks::<3>(indices).into()
     };
     (vertices, indices)
-}
-
-#[cfg(test)]
-mod tests {
-    // Note this useful idiom: importing names from outer (for mod tests) scope.
-    use super::*;
-
-    #[test]
-    fn test_lens() {
-        let surf = load_obj("/home/lieunoir/meshes/armadillo.obj");
-        let f = match &surf.1 {
-            SurfaceIndices::Triangles(t) => t,
-            _ => panic!(),
-        };
-        assert!(surf.0.len() == 49990);
-        assert!(f.len() == 99976);
-
-        let surf = load_obj("/home/lieunoir/meshes/bob.obj");
-        let f = match &surf.1 {
-            SurfaceIndices::Triangles(t) => t,
-            _ => panic!(),
-        };
-        assert!(surf.0.len() == 5344);
-        assert!(f.len() == 10688);
-
-        let surf = load_obj("/home/lieunoir/meshes/lucy.obj");
-        let f = match &surf.1 {
-            SurfaceIndices::Triangles(t) => t,
-            _ => panic!(),
-        };
-        assert!(surf.0.len() == 14027872);
-        assert!(f.len() == 28055728);
-    }
 }

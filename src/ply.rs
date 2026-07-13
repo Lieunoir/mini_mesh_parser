@@ -1,10 +1,5 @@
 use crate::{FaceMode, SurfaceIndices, find_blank_or_newline, into_chunks};
-use std::{
-    fs::File,
-    io::{BufReader, prelude::*},
-    path::Path,
-    str::FromStr,
-};
+use std::{io::BufRead, str::FromStr};
 
 enum Format {
     Ascii,
@@ -933,7 +928,6 @@ fn parse_binary(
 
 unsafe fn parse_float(slice: &[u8]) -> Option<(f32, usize)> {
     unsafe {
-        //let mut i = position();
         let mut i = 0;
         while slice[i] == b' ' {
             i += 1;
@@ -949,29 +943,15 @@ unsafe fn parse_float(slice: &[u8]) -> Option<(f32, usize)> {
     }
 }
 
-pub fn load_ply(file_name: impl AsRef<Path>) -> (Vec<[f32; 3]>, SurfaceIndices) {
-    let file = match File::open(file_name.as_ref()) {
-        Ok(f) => f,
-        Err(_e) => {
-            panic!()
-            //return Err(LoadError::OpenFileFailed);
-        }
-    };
-    let mut reader = BufReader::new(file);
-    load_ply_buf(&mut reader)
-}
-
-pub fn load_ply_buf<B>(reader: &mut B) -> (Vec<[f32; 3]>, SurfaceIndices)
-where
-    B: BufRead,
-{
+pub fn load_ply_buf<B: BufRead, const BUFFER_SIZE: usize>(
+    reader: &mut B,
+    buf: &mut [u8; BUFFER_SIZE],
+    mut start: usize,
+) -> (Vec<[f32; 3]>, SurfaceIndices) {
     let mut vertices = Vec::new();
     let mut indices = Vec::new();
     let mut strides: Vec<u8> = Vec::new();
     let mut mode = FaceMode::Undetermined;
-    const BUFFER_SIZE: usize = 65536;
-    let mut buf = [0; BUFFER_SIZE];
-    let mut start = 0;
     let mut parsing_tracker = 0;
     let mut first = true;
     let mut parsing_state = ParsingState::new();

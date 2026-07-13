@@ -1,8 +1,4 @@
-use std::{
-    fs::File,
-    io::{BufReader, prelude::*},
-    path::Path,
-};
+use std::io::BufRead;
 
 use crate::{FaceMode, SurfaceIndices, into_chunks, parse_float3};
 
@@ -102,22 +98,11 @@ fn parse_header(buf: &[u8]) -> (usize, usize, usize) {
     (nv as usize, nf as usize, endword)
 }
 
-pub fn load_off(file_name: impl AsRef<Path>) -> (Vec<[f32; 3]>, SurfaceIndices) {
-    let file = match File::open(file_name.as_ref()) {
-        Ok(f) => f,
-        Err(_e) => {
-            panic!()
-            //return Err(LoadError::OpenFileFailed);
-        }
-    };
-    let mut reader = BufReader::new(file);
-    load_off_buf(&mut reader)
-}
-
-pub fn load_off_buf<B>(reader: &mut B) -> (Vec<[f32; 3]>, SurfaceIndices)
-where
-    B: BufRead,
-{
+pub fn load_off_buf<B: BufRead, const BUFFER_SIZE: usize>(
+    reader: &mut B,
+    buf: &mut [u8; BUFFER_SIZE],
+    mut start: usize,
+) -> (Vec<[f32; 3]>, SurfaceIndices) {
     let mut line_number = 0;
     let mut nv = 0;
     let mut nf = 0;
@@ -125,9 +110,6 @@ where
     let mut mode = FaceMode::Undetermined;
     let mut indices: Vec<u32> = Vec::new();
     let mut strides: Vec<u8> = Vec::new();
-    const BUFFER_SIZE: usize = 65536;
-    let mut buf = [0; BUFFER_SIZE];
-    let mut start = 0;
     'outer: while let Ok(size) = reader.read(&mut buf[start..]) {
         if size == 0 && start == 0 {
             break;
