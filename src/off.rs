@@ -38,15 +38,23 @@ fn parse_face_indices(
     let mut off = 0;
     let mut data = face_str;
     // get_line already stripped blanks
-    let (face_len, mut endword) = parse_int(data)?;
+    let (face_len, mut endword) = match parse_int(data) {
+        Some(v) => v,
+        None => {
+            std::hint::cold_path();
+            return None;
+        }
+    };
     endword += 1;
 
     if face_len < 3 {
+        std::hint::cold_path();
         return None;
     }
 
     if *mode != FaceMode::Polygon {
         if *mode == FaceMode::Undetermined {
+            std::hint::cold_path();
             if face_len == 3 {
                 *mode = FaceMode::Triangle;
             } else if face_len == 4 {
@@ -55,11 +63,13 @@ fn parse_face_indices(
                 *mode = FaceMode::Polygon;
             }
         } else if *mode == FaceMode::Triangle && face_len != 3 {
+            std::hint::cold_path();
             //add missing strides
             *strides = vec![3; indices.len() / 3];
             strides.reserve(nf - strides.len());
             *mode = FaceMode::Polygon;
         } else if *mode == FaceMode::Quad && face_len != 4 {
+            std::hint::cold_path();
             //add missing strides
             *strides = vec![4; indices.len() / 4];
             *mode = FaceMode::Polygon;
@@ -70,38 +80,105 @@ fn parse_face_indices(
         strides.push(face_len as u8);
     }
 
-    endword += data[endword..].iter().position(|&c| c != b' ')?;
+    if data[endword] == b' ' {
+        std::hint::cold_path();
+        endword += 1;
+        endword += match data[endword..].iter().position(|&c| c != b' ') {
+            Some(v) => v,
+            None => {
+                std::hint::cold_path();
+                return None;
+            }
+        };
+        data = &data[endword..];
+    } else {
+        data = &data[endword..];
+    }
     off += endword;
-    data = &data[endword..];
 
-    let (v, mut endword) = parse_int(data)?;
+    let (v, mut endword) = match parse_int(data) {
+        Some(v) => v,
+        None => {
+            std::hint::cold_path();
+            return None;
+        }
+    };
     endword += 1;
     indices.push(v);
-    endword += data[endword..].iter().position(|&c| c != b' ')?;
-    off += endword;
-    data = &data[endword..];
 
-    let (v, mut endword) = parse_int(data)?;
+    if data[endword] == b' ' {
+        std::hint::cold_path();
+        endword += 1;
+        endword += match data[endword..].iter().position(|&c| c != b' ') {
+            Some(v) => v,
+            None => {
+                std::hint::cold_path();
+                return None;
+            }
+        };
+        data = &data[endword..];
+    } else {
+        data = &data[endword..];
+    }
+    off += endword;
+
+    let (v, mut endword) = match parse_int(data) {
+        Some(v) => v,
+        None => {
+            std::hint::cold_path();
+            return None;
+        }
+    };
     endword += 1;
     indices.push(v);
-    endword += data[endword..].iter().position(|&c| c != b' ')?;
+
+    if data[endword] == b' ' {
+        std::hint::cold_path();
+        endword += 1;
+        endword += match data[endword..].iter().position(|&c| c != b' ') {
+            Some(v) => v,
+            None => {
+                std::hint::cold_path();
+                return None;
+            }
+        };
+        data = &data[endword..];
+    } else {
+        data = &data[endword..];
+    }
     off += endword;
-    data = &data[endword..];
 
     for _ in 0..face_len - 3 {
         let (v, mut endword) = parse_int(data)?;
         endword += 1;
         indices.push(v);
-        endword += data[endword..].iter().position(|&c| c != b' ')?;
+
+        if data[endword] == b' ' {
+            std::hint::cold_path();
+            endword += 1;
+            endword += match data[endword..].iter().position(|&c| c != b' ') {
+                Some(v) => v,
+                None => {
+                    std::hint::cold_path();
+                    return None;
+                }
+            };
+            data = &data[endword..];
+        } else {
+            data = &data[endword..];
+        }
         off += endword;
-        data = &data[endword..];
     }
 
-    let (v, mut endword) = parse_int(data)?;
+    let (v, endword) = match parse_int(data) {
+        Some(v) => v,
+        None => {
+            std::hint::cold_path();
+            return None;
+        }
+    };
     indices.push(v);
-    endword += data[endword..].iter().position(|&c| c != b' ')?;
     off += endword;
-
     Some(off)
 }
 
