@@ -85,6 +85,10 @@ unsafe fn parse_float3(slice: &[u8]) -> (usize, [f32; 3]) {
     }
 }
 
+fn find_newline(slice: &[u8]) -> Option<usize> {
+    slice.iter().position(|&v| v == b'\n')
+}
+
 fn find_blank_or_newline(slice: &[u8]) -> Option<usize> {
     slice
         .iter()
@@ -93,6 +97,150 @@ fn find_blank_or_newline(slice: &[u8]) -> Option<usize> {
 
 fn find_blank_space(slice: &[u8]) -> Option<usize> {
     slice.iter().position(|&v| v == b' ')
+}
+
+fn parse_u8(data: &mut &[u8]) -> u8 {
+    let first_b = data[0];
+    let mut res = if first_b == b'+' { 0 } else { first_b & 0x0f };
+    *data = &data[1..];
+    while !data.is_empty() && data[0].is_ascii_digit() {
+        res = res * 10 + (data[0] - b'0');
+        *data = &data[1..];
+    }
+    res
+}
+
+fn parse_uint(data: &[u8]) -> Option<(u32, usize)> {
+    data.first().map(|&first_b| {
+        let first_b = if first_b == b'+' { 0 } else { first_b & 0x0f };
+        let (i, acc) = data[1..]
+            .iter()
+            .take_while(|&val| val.is_ascii_digit())
+            .fold((0, first_b as u32), |(i, acc), &val| {
+                (i + 1, acc * 10 + (val - b'0') as u32)
+            });
+        (acc, i + 1)
+    })
+}
+
+fn parse_face_indices_list(
+    data: &mut &[u8],
+    mode: &mut FaceMode,
+    indices: &mut Vec<u32>,
+    strides: &mut Vec<u8>,
+    nf: usize,
+) -> Option<()> {
+    // get_line already stripped blanks
+    let face_len = parse_u8(data);
+
+    if data.is_empty() || face_len < 3 {
+        std::hint::cold_path();
+        return None;
+    }
+    *data = &data[1..];
+
+    if *mode != FaceMode::Polygon {
+        if *mode == FaceMode::Undetermined {
+            std::hint::cold_path();
+            if face_len == 3 {
+                *mode = FaceMode::Triangle;
+            } else if face_len == 4 {
+                *mode = FaceMode::Quad;
+            } else {
+                *mode = FaceMode::Polygon;
+            }
+        } else if *mode == FaceMode::Triangle && face_len != 3 {
+            std::hint::cold_path();
+            //add missing strides
+            *strides = vec![3; indices.len() / 3];
+            strides.reserve(nf - strides.len());
+            *mode = FaceMode::Polygon;
+        } else if *mode == FaceMode::Quad && face_len != 4 {
+            std::hint::cold_path();
+            //add missing strides
+            *strides = vec![4; indices.len() / 4];
+            *mode = FaceMode::Polygon;
+            strides.reserve(nf - strides.len());
+        }
+    }
+    if *mode == FaceMode::Polygon {
+        strides.push(face_len as u8);
+    }
+
+    if data[0] == b' ' {
+        std::hint::cold_path();
+        *data = &data[1..];
+        while !data.is_empty() && data[0] == b' ' {
+            *data = &data[1..];
+        }
+    }
+
+    let (v, endword) = match parse_uint(data) {
+        Some(v) => v,
+        None => {
+            std::hint::cold_path();
+            return None;
+        }
+    };
+    *data = &data[endword + 1..];
+    indices.push(v);
+
+    if data[0] == b' ' {
+        std::hint::cold_path();
+        *data = &data[1..];
+        while !data.is_empty() && data[0] == b' ' {
+            *data = &data[1..];
+        }
+    }
+
+    let (v, endword) = match parse_uint(data) {
+        Some(v) => v,
+        None => {
+            std::hint::cold_path();
+            return None;
+        }
+    };
+    *data = &data[endword + 1..];
+    indices.push(v);
+
+    if data[0] == b' ' {
+        std::hint::cold_path();
+        *data = &data[1..];
+        while !data.is_empty() && data[0] == b' ' {
+            *data = &data[1..];
+        }
+    }
+
+    for _ in 0..face_len - 3 {
+        let (v, endword) = parse_uint(data)?;
+        *data = &data[endword + 1..];
+        indices.push(v);
+
+        if data[0] == b' ' {
+            std::hint::cold_path();
+            *data = &data[1..];
+            while !data.is_empty() && data[0] == b' ' {
+                *data = &data[1..];
+            }
+        }
+    }
+
+    let (v, endword) = match parse_uint(data) {
+        Some(v) => v,
+        None => {
+            std::hint::cold_path();
+            return None;
+        }
+    };
+    indices.push(v);
+    *data = &data[endword..];
+    let off = match data[0] {
+        b'\r' => 2,
+        b'\n' => 1,
+        _ => find_newline(&data[1..])? + 2,
+    };
+    *data = &data[off..];
+    Some(())
 }
 
 // Taken from std https://github.com/rust-lang/rust/issues/142137
