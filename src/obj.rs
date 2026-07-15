@@ -3,13 +3,19 @@ use std::io::BufRead;
 use crate::{FaceMode, SurfaceIndices, into_chunks, parse_float3};
 
 fn find_newline(slice: &[u8]) -> Option<usize> {
-    slice.iter().position(|&v| v == b'\n')
-}
-
-fn find_blank_or_newline(slice: &[u8]) -> Option<usize> {
-    slice
-        .iter()
-        .position(|&v| v == b' ' || v == b'\n' || v == b'\r')
+    let (chunks, rem) = slice.as_chunks::<8>();
+    if let Some((i, word)) = chunks.iter().enumerate().find_map(|(i, &c)| {
+        let word = u64::from_le_bytes(c);
+        let word = word ^ 0x0A0A0A0A0A0A0A0A;
+        let word = word.wrapping_sub(0x0101010101010101) & !word & 0x8080808080808080;
+        if word != 0 { Some((i, word)) } else { None }
+    }) {
+        let off = word.trailing_zeros() / 8;
+        return Some(i * 8 + off as usize);
+    }
+    rem.iter()
+        .position(|&v| v == b'\n')
+        .map(|off| off + chunks.len() * 8)
 }
 
 fn parse_int(data: &[u8], pos_sz: u32) -> Option<(u32, usize)> {
@@ -169,7 +175,7 @@ pub fn load_obj_buf<B: BufRead, const BUFFER_SIZE: usize>(
                         vertices.len() as u32,
                     )
                     .ok_or(())?;
-                    i += 2 + off;
+                    i += 3 + off;
                 }
                 _ => i += find_newline(&buf[i..]).ok_or(())? + 1,
             }
