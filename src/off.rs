@@ -6,13 +6,13 @@ fn find_newline(slice: &[u8]) -> Option<usize> {
     slice.iter().position(|&v| v == b'\n')
 }
 
-fn get_line_start(slice: &[u8]) -> Option<usize> {
-    let i = slice.iter().position(|&c| c != b' ')?;
-    if slice[i] == b'#' {
-        return None;
-    } else {
-        return Some(i);
+fn get_line_start(data: &[u8]) -> Option<usize> {
+    let mut i = data.iter().position(|&c| c != b' ')?;
+    while data[i] == b'#' {
+        i += 2 + data[i + 1..].iter().position(|&c| c != b'\n')?;
+        i += data.iter().position(|&c| c != b' ')?;
     }
+    return Some(i);
 }
 
 fn parse_int(data: &[u8]) -> Option<(u32, usize)> {
@@ -29,23 +29,21 @@ fn parse_int(data: &[u8]) -> Option<(u32, usize)> {
 }
 
 fn parse_face_indices(
-    face_str: &[u8],
+    data: &mut &[u8],
     mode: &mut FaceMode,
     indices: &mut Vec<u32>,
     strides: &mut Vec<u8>,
     nf: usize,
-) -> Option<usize> {
-    let mut off = 0;
-    let mut data = face_str;
+) -> Option<()> {
     // get_line already stripped blanks
-    let (face_len, mut endword) = match parse_int(data) {
+    let (face_len, endword) = match parse_int(data) {
         Some(v) => v,
         None => {
             std::hint::cold_path();
             return None;
         }
     };
-    endword += 1;
+    *data = &data[endword + 1..];
 
     if face_len < 3 {
         std::hint::cold_path();
@@ -80,94 +78,78 @@ fn parse_face_indices(
         strides.push(face_len as u8);
     }
 
-    if data[endword] == b' ' {
+    if data[0] == b' ' {
         std::hint::cold_path();
-        endword += 1;
-        endword += match data[endword..].iter().position(|&c| c != b' ') {
+        let endword = 1 + match data[1..].iter().position(|&c| c != b' ') {
             Some(v) => v,
             None => {
                 std::hint::cold_path();
                 return None;
             }
         };
-        data = &data[endword..];
-    } else {
-        data = &data[endword..];
+        *data = &data[endword..];
     }
-    off += endword;
 
-    let (v, mut endword) = match parse_int(data) {
+    let (v, endword) = match parse_int(data) {
         Some(v) => v,
         None => {
             std::hint::cold_path();
             return None;
         }
     };
-    endword += 1;
+    *data = &data[endword + 1..];
     indices.push(v);
 
-    if data[endword] == b' ' {
+    if data[0] == b' ' {
         std::hint::cold_path();
-        endword += 1;
-        endword += match data[endword..].iter().position(|&c| c != b' ') {
+        let endword = 1 + match data[1..].iter().position(|&c| c != b' ') {
             Some(v) => v,
             None => {
                 std::hint::cold_path();
                 return None;
             }
         };
-        data = &data[endword..];
-    } else {
-        data = &data[endword..];
+        *data = &data[endword..];
     }
-    off += endword;
 
-    let (v, mut endword) = match parse_int(data) {
+    let (v, endword) = match parse_int(data) {
         Some(v) => v,
         None => {
             std::hint::cold_path();
             return None;
         }
     };
-    endword += 1;
+    *data = &data[endword + 1..];
     indices.push(v);
 
-    if data[endword] == b' ' {
+    if data[0] == b' ' {
         std::hint::cold_path();
-        endword += 1;
-        endword += match data[endword..].iter().position(|&c| c != b' ') {
+        let endword = 1 + match data[1..].iter().position(|&c| c != b' ') {
             Some(v) => v,
             None => {
                 std::hint::cold_path();
                 return None;
             }
         };
-        data = &data[endword..];
-    } else {
-        data = &data[endword..];
+        *data = &data[endword..];
     }
-    off += endword;
 
     for _ in 0..face_len - 3 {
-        let (v, mut endword) = parse_int(data)?;
-        endword += 1;
+        let (v, endword) = parse_int(data)?;
+        *data = &data[endword + 1..];
         indices.push(v);
 
-        if data[endword] == b' ' {
+        if data[0] == b' ' {
             std::hint::cold_path();
-            endword += 1;
-            endword += match data[endword..].iter().position(|&c| c != b' ') {
+            let endword = 1 + match data[1..].iter().position(|&c| c != b' ') {
                 Some(v) => v,
                 None => {
                     std::hint::cold_path();
                     return None;
                 }
             };
-            data = &data[endword..];
-        } else {
-            data = &data[endword..];
+            *data = &data[endword..];
         }
-        off += endword;
     }
 
     let (v, endword) = match parse_int(data) {
@@ -178,8 +160,8 @@ fn parse_face_indices(
         }
     };
     indices.push(v);
-    off += endword;
-    Some(off)
+    *data = &data[endword..];
+    Some(())
 }
 
 fn parse_header(buf: &[u8]) -> Option<(usize, usize, usize)> {
@@ -203,7 +185,7 @@ pub fn load_off_buf<B: BufRead, const BUFFER_SIZE: usize>(
     let mut mode = FaceMode::Undetermined;
     let mut indices: Vec<u32> = Vec::new();
     let mut strides: Vec<u8> = Vec::new();
-    'outer: while let Ok(size) = reader.read(&mut buf[start..]) {
+    while let Ok(size) = reader.read(&mut buf[start..]) {
         if size == 0 && start == 0 {
             break;
         }
@@ -217,47 +199,57 @@ pub fn load_off_buf<B: BufRead, const BUFFER_SIZE: usize>(
         }
         last += 1;
 
-        let mut i = 0;
-        while i < last {
-            if let Some(line_start) = get_line_start(&buf[i..]) {
-                i += line_start;
-                if line_number == 0 {
-                    if buf.split_first_chunk::<3>().ok_or(())?.0 == b"OFF" {
-                        i += find_newline(&buf[3..]).ok_or(())? + 4;
-                    }
-                    let endword;
-                    (nv, nf, endword) = parse_header(&buf[i..]).ok_or(())?;
-                    vertices.reserve(nv);
-                    indices.reserve(nv + nf - 2);
-                    line_number += 1;
-                    i += find_newline(&buf[i + endword..]).ok_or(())? + endword + 1;
-                } else if line_number < nv + 1 {
-                    let (off, pos) = unsafe { parse_float3(&buf[i..]) };
-                    line_number += 1;
-                    vertices.push(pos);
-                    i += off;
-                    i += match buf[i] {
-                        b'\r' => 2,
-                        b'\n' => 1,
-                        _ => find_newline(&buf[i..]).ok_or(())? + 1,
-                    }
-                } else if line_number < 1 + nv + nf {
-                    let off =
-                        parse_face_indices(&buf[i..], &mut mode, &mut indices, &mut strides, nf)
-                            .ok_or(())?;
-                    line_number += 1;
-                    i += off;
-                    i += match buf[i] {
-                        b'\r' => 2,
-                        b'\n' => 1,
-                        _ => find_newline(&buf[i..]).ok_or(())? + 1,
-                    }
-                } else {
-                    break 'outer;
-                }
-            } else {
-                i += find_newline(&buf[i..]).ok_or(())? + 1;
+        let mut data = &buf[..last];
+
+        if line_number == 0 {
+            let line_start = get_line_start(data).ok_or(())?;
+            data = &data[line_start..];
+            if data.split_first_chunk::<3>().ok_or(())?.0 == b"OFF" {
+                let end = find_newline(&data[3..]).ok_or(())? + 4;
+                data = &data[end..];
             }
+            let endword;
+            (nv, nf, endword) = parse_header(data).ok_or(())?;
+            data = &data[endword..];
+            vertices.reserve(nv);
+            indices.reserve(nv + nf - 2);
+            line_number += 1;
+            let end = find_newline(data).ok_or(())? + 1;
+            data = &data[end..];
+        }
+
+        while line_number < nv + 1
+            && let Some(line_start) = get_line_start(data)
+        {
+            data = &data[line_start..];
+            let (off, pos) = unsafe { parse_float3(data) };
+            data = &data[off..];
+            line_number += 1;
+            vertices.push(pos);
+            let off = match data[0] {
+                b'\r' => 2,
+                b'\n' => 1,
+                _ => find_newline(data).ok_or(())? + 1,
+            };
+            data = &data[off..];
+        }
+
+        while line_number < nv + nf + 1
+            && let Some(line_start) = get_line_start(data)
+        {
+            data = &data[line_start..];
+            parse_face_indices(&mut data, &mut mode, &mut indices, &mut strides, nf).ok_or(())?;
+            line_number += 1;
+            let off = match data[0] {
+                b'\r' => 2,
+                b'\n' => 1,
+                _ => find_newline(data).ok_or(())? + 1,
+            };
+            data = &data[off..];
+        }
+
+        if line_number >= nv + nf + 1 {
+            break;
         }
 
         start = end - last;
