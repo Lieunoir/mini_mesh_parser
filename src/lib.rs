@@ -55,20 +55,30 @@ unsafe fn parse_float3(slice: &[u8]) -> (usize, [f32; 3]) {
         let f1 =
             FromStr::from_str(std::str::from_utf8_unchecked(&slice[start..(start + sep)])).unwrap();
         start += sep + 1;
-        start += slice[start..].iter().position(|&c| c != b' ').unwrap();
+        if slice[start] == b' ' {
+            std::hint::cold_path();
+            start += slice[start..].iter().position(|&c| c != b' ').unwrap();
+        }
         sep = find_blank_space(&slice[start + 1..]).unwrap() + 1;
         let f2 =
             FromStr::from_str(std::str::from_utf8_unchecked(&slice[start..(start + sep)])).unwrap();
         start += sep + 1;
-        start += slice[start..].iter().position(|&c| c != b' ').unwrap();
+        if slice[start] == b' ' {
+            std::hint::cold_path();
+            start += slice[start..].iter().position(|&c| c != b' ').unwrap();
+        }
         sep = find_blank_or_newline(&slice[start + 1..]).unwrap() + 1;
         let f3 =
             FromStr::from_str(std::str::from_utf8_unchecked(&slice[start..(start + sep)])).unwrap();
         start += sep;
-        start += slice[start..]
-            .iter()
-            .position(|&c| c != b' ' && c != b'\r')
-            .unwrap();
+        start += match slice[start] {
+            b'\r' => 1,
+            b'\n' => 0,
+            _ => {
+                std::hint::cold_path();
+                slice[start + 1..].iter().position(|&c| c == b'\n').unwrap() + 1
+            }
+        };
         let arr: [f32; 3] = [f1, f2, f3];
 
         (start, arr)

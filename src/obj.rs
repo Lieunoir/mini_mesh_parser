@@ -144,7 +144,7 @@ pub fn load_obj_buf<B: BufRead, const BUFFER_SIZE: usize>(
                     b' ' => {
                         let (off, pos) = unsafe { parse_float3(&buf[i + 2..]) };
                         vertices.push(pos);
-                        i += off + 2;
+                        i += off + 3;
                     }
                     _ => i += find_newline(&buf[i + 1..]).ok_or(())? + 2,
                 },

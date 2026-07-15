@@ -12,20 +12,18 @@ fn get_line_start(data: &[u8]) -> Option<usize> {
         i += 2 + data[i + 1..].iter().position(|&c| c != b'\n')?;
         i += data.iter().position(|&c| c != b' ')?;
     }
-    return Some(i);
+    Some(i)
 }
 
-fn parse_u8(data: &[u8]) -> Option<(u8, usize)> {
-    data.first().map(|&first_b| {
-        let first_b = if first_b == b'+' { 0 } else { first_b & 0x0f };
-        let (i, acc) = data[1..]
-            .iter()
-            .take_while(|&val| val.is_ascii_digit())
-            .fold((0, first_b), |(i, acc), &val| {
-                (i + 1, acc * 10 + (val - b'0'))
-            });
-        (acc, i + 1)
-    })
+fn parse_u8(data: &mut &[u8]) -> u8 {
+    let first_b = data[0];
+    let mut res = if first_b == b'+' { 0 } else { first_b & 0x0f };
+    *data = &data[1..];
+    while !data.is_empty() && data[0].is_ascii_digit() {
+        res = res * 10 + (data[0] - b'0');
+        *data = &data[1..];
+    }
+    res
 }
 
 fn parse_uint(data: &[u8]) -> Option<(u32, usize)> {
@@ -49,19 +47,13 @@ fn parse_face_indices(
     nf: usize,
 ) -> Option<()> {
     // get_line already stripped blanks
-    let (face_len, endword) = match parse_u8(data) {
-        Some(v) => v,
-        None => {
-            std::hint::cold_path();
-            return None;
-        }
-    };
-    *data = &data[endword + 1..];
+    let face_len = parse_u8(data);
 
-    if face_len < 3 {
+    if data.is_empty() || face_len < 3 {
         std::hint::cold_path();
         return None;
     }
+    *data = &data[1..];
 
     if *mode != FaceMode::Polygon {
         if *mode == FaceMode::Undetermined {
@@ -93,14 +85,10 @@ fn parse_face_indices(
 
     if data[0] == b' ' {
         std::hint::cold_path();
-        let endword = 1 + match data[1..].iter().position(|&c| c != b' ') {
-            Some(v) => v,
-            None => {
-                std::hint::cold_path();
-                return None;
-            }
-        };
-        *data = &data[endword..];
+        *data = &data[1..];
+        while !data.is_empty() && data[0] == b' ' {
+            *data = &data[1..];
+        }
     }
 
     let (v, endword) = match parse_uint(data) {
@@ -115,14 +103,10 @@ fn parse_face_indices(
 
     if data[0] == b' ' {
         std::hint::cold_path();
-        let endword = 1 + match data[1..].iter().position(|&c| c != b' ') {
-            Some(v) => v,
-            None => {
-                std::hint::cold_path();
-                return None;
-            }
-        };
-        *data = &data[endword..];
+        *data = &data[1..];
+        while !data.is_empty() && data[0] == b' ' {
+            *data = &data[1..];
+        }
     }
 
     let (v, endword) = match parse_uint(data) {
@@ -137,14 +121,10 @@ fn parse_face_indices(
 
     if data[0] == b' ' {
         std::hint::cold_path();
-        let endword = 1 + match data[1..].iter().position(|&c| c != b' ') {
-            Some(v) => v,
-            None => {
-                std::hint::cold_path();
-                return None;
-            }
-        };
-        *data = &data[endword..];
+        *data = &data[1..];
+        while !data.is_empty() && data[0] == b' ' {
+            *data = &data[1..];
+        }
     }
 
     for _ in 0..face_len - 3 {
@@ -154,14 +134,10 @@ fn parse_face_indices(
 
         if data[0] == b' ' {
             std::hint::cold_path();
-            let endword = 1 + match data[1..].iter().position(|&c| c != b' ') {
-                Some(v) => v,
-                None => {
-                    std::hint::cold_path();
-                    return None;
-                }
-            };
-            *data = &data[endword..];
+            *data = &data[1..];
+            while !data.is_empty() && data[0] == b' ' {
+                *data = &data[1..];
+            }
         }
     }
 
@@ -236,15 +212,9 @@ pub fn load_off_buf<B: BufRead, const BUFFER_SIZE: usize>(
         {
             data = &data[line_start..];
             let (off, pos) = unsafe { parse_float3(data) };
-            data = &data[off..];
+            data = &data[off + 1..];
             line_number += 1;
             vertices.push(pos);
-            let off = match data[0] {
-                b'\r' => 2,
-                b'\n' => 1,
-                _ => find_newline(data).ok_or(())? + 1,
-            };
-            data = &data[off..];
         }
 
         while line_number < nv + nf + 1
@@ -256,7 +226,7 @@ pub fn load_off_buf<B: BufRead, const BUFFER_SIZE: usize>(
             let off = match data[0] {
                 b'\r' => 2,
                 b'\n' => 1,
-                _ => find_newline(data).ok_or(())? + 1,
+                _ => find_newline(&data[1..]).ok_or(())? + 2,
             };
             data = &data[off..];
         }
