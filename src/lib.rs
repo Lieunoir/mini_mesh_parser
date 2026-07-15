@@ -99,15 +99,15 @@ fn find_blank_space(slice: &[u8]) -> Option<usize> {
     slice.iter().position(|&v| v == b' ')
 }
 
-fn parse_u8(data: &mut &[u8]) -> u8 {
-    let first_b = data[0];
+fn parse_u8(data: &mut &[u8]) -> Option<u8> {
+    let first_b = *data.get(0)?;
     let mut res = if first_b == b'+' { 0 } else { first_b & 0x0f };
     *data = &data[1..];
     while !data.is_empty() && data[0].is_ascii_digit() {
         res = res * 10 + (data[0] - b'0');
         *data = &data[1..];
     }
-    res
+    Some(res)
 }
 
 fn parse_uint(data: &[u8]) -> Option<(u32, usize)> {
@@ -131,13 +131,13 @@ fn parse_face_indices_list(
     nf: usize,
 ) -> Option<()> {
     // get_line already stripped blanks
-    let face_len = parse_u8(data);
+    let face_len = parse_u8(data)?;
 
     if data.is_empty() || face_len < 3 {
         std::hint::cold_path();
         return None;
     }
-    *data = &data[1..];
+    *data = data.get(1..)?;
 
     if *mode != FaceMode::Polygon {
         if *mode == FaceMode::Undetermined {
@@ -167,7 +167,7 @@ fn parse_face_indices_list(
         strides.push(face_len as u8);
     }
 
-    if data[0] == b' ' {
+    if *data.get(0)? == b' ' {
         std::hint::cold_path();
         *data = &data[1..];
         while !data.is_empty() && data[0] == b' ' {
@@ -182,10 +182,10 @@ fn parse_face_indices_list(
             return None;
         }
     };
-    *data = &data[endword + 1..];
+    *data = data.get(endword + 1..)?;
     indices.push(v);
 
-    if data[0] == b' ' {
+    if *data.get(0)? == b' ' {
         std::hint::cold_path();
         *data = &data[1..];
         while !data.is_empty() && data[0] == b' ' {
@@ -200,10 +200,10 @@ fn parse_face_indices_list(
             return None;
         }
     };
-    *data = &data[endword + 1..];
+    *data = data.get(endword + 1..)?;
     indices.push(v);
 
-    if data[0] == b' ' {
+    if *data.get(0)? == b' ' {
         std::hint::cold_path();
         *data = &data[1..];
         while !data.is_empty() && data[0] == b' ' {
@@ -213,10 +213,10 @@ fn parse_face_indices_list(
 
     for _ in 0..face_len - 3 {
         let (v, endword) = parse_uint(data)?;
-        *data = &data[endword + 1..];
+        *data = &data.get(endword + 1..)?;
         indices.push(v);
 
-        if data[0] == b' ' {
+        if *data.get(0)? == b' ' {
             std::hint::cold_path();
             *data = &data[1..];
             while !data.is_empty() && data[0] == b' ' {
@@ -233,13 +233,13 @@ fn parse_face_indices_list(
         }
     };
     indices.push(v);
-    *data = &data[endword..];
-    let off = match data[0] {
+    *data = data.get(endword..)?;
+    let off = match data.get(0)? {
         b'\r' => 2,
         b'\n' => 1,
-        _ => find_newline(&data[1..])? + 2,
+        _ => data[1..].iter().position(|&c| c == b'\n')? + 2,
     };
-    *data = &data[off..];
+    *data = data.get(off..)?;
     Some(())
 }
 
