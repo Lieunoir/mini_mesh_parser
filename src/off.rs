@@ -15,16 +15,29 @@ fn get_line_start(data: &[u8]) -> Option<usize> {
     return Some(i);
 }
 
-fn parse_int(data: &[u8]) -> Option<(u32, usize)> {
+fn parse_u8(data: &[u8]) -> Option<(u8, usize)> {
     data.first().map(|&first_b| {
-        let start = (first_b == b'+') as usize;
-        let (i, acc) = data[start..]
+        let first_b = if first_b == b'+' { 0 } else { first_b & 0x0f };
+        let (i, acc) = data[1..]
             .iter()
             .take_while(|&val| val.is_ascii_digit())
-            .fold((0, 0), |(i, acc), &val| {
+            .fold((0, first_b), |(i, acc), &val| {
+                (i + 1, acc * 10 + (val - b'0'))
+            });
+        (acc, i + 1)
+    })
+}
+
+fn parse_uint(data: &[u8]) -> Option<(u32, usize)> {
+    data.first().map(|&first_b| {
+        let first_b = if first_b == b'+' { 0 } else { first_b & 0x0f };
+        let (i, acc) = data[1..]
+            .iter()
+            .take_while(|&val| val.is_ascii_digit())
+            .fold((0, first_b as u32), |(i, acc), &val| {
                 (i + 1, acc * 10 + (val - b'0') as u32)
             });
-        (acc, i + start)
+        (acc, i + 1)
     })
 }
 
@@ -36,7 +49,7 @@ fn parse_face_indices(
     nf: usize,
 ) -> Option<()> {
     // get_line already stripped blanks
-    let (face_len, endword) = match parse_int(data) {
+    let (face_len, endword) = match parse_u8(data) {
         Some(v) => v,
         None => {
             std::hint::cold_path();
@@ -90,7 +103,7 @@ fn parse_face_indices(
         *data = &data[endword..];
     }
 
-    let (v, endword) = match parse_int(data) {
+    let (v, endword) = match parse_uint(data) {
         Some(v) => v,
         None => {
             std::hint::cold_path();
@@ -112,7 +125,7 @@ fn parse_face_indices(
         *data = &data[endword..];
     }
 
-    let (v, endword) = match parse_int(data) {
+    let (v, endword) = match parse_uint(data) {
         Some(v) => v,
         None => {
             std::hint::cold_path();
@@ -135,7 +148,7 @@ fn parse_face_indices(
     }
 
     for _ in 0..face_len - 3 {
-        let (v, endword) = parse_int(data)?;
+        let (v, endword) = parse_uint(data)?;
         *data = &data[endword + 1..];
         indices.push(v);
 
@@ -152,7 +165,7 @@ fn parse_face_indices(
         }
     }
 
-    let (v, endword) = match parse_int(data) {
+    let (v, endword) = match parse_uint(data) {
         Some(v) => v,
         None => {
             std::hint::cold_path();
@@ -165,11 +178,11 @@ fn parse_face_indices(
 }
 
 fn parse_header(buf: &[u8]) -> Option<(usize, usize, usize)> {
-    let (nv, mut endword) = parse_int(buf)?;
+    let (nv, mut endword) = parse_uint(buf)?;
     while endword < buf.len() && buf[endword] == b' ' {
         endword += 1;
     }
-    let (nf, endword) = parse_int(&buf[endword..])?;
+    let (nf, endword) = parse_uint(&buf[endword..])?;
     Some((nv as usize, nf as usize, endword))
 }
 
