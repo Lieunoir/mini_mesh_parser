@@ -4,17 +4,21 @@ use crate::{
     FaceMode, SurfaceIndices, into_chunks, parse_face_indices_list, parse_float3, parse_uint,
 };
 
-fn find_newline(slice: &[u8]) -> Option<usize> {
-    slice.iter().position(|&v| v == b'\n')
-}
-
-fn get_line_start(data: &[u8]) -> Option<usize> {
-    let mut i = data.iter().position(|&c| c != b' ')?;
-    while data[i] == b'#' {
-        i += 2 + data[i + 1..].iter().position(|&c| c != b'\n')?;
-        i += data.iter().position(|&c| c != b' ')?;
+fn get_line_start(mut data: &[u8]) -> Option<usize> {
+    if data.is_empty() {
+        None
+    } else if data[0] != b' ' && data[0] != b'#' {
+        Some(0)
+    } else {
+        std::hint::cold_path();
+        data = &data[1..];
+        let mut i = data.iter().position(|&c| c != b' ')?;
+        while data[i] == b'#' {
+            i += 2 + data[i + 1..].iter().position(|&c| c != b'\n')?;
+            i += data.iter().position(|&c| c != b' ')?;
+        }
+        Some(i + 1)
     }
-    Some(i)
 }
 
 fn parse_header(buf: &[u8]) -> Option<(usize, usize, usize)> {
@@ -58,7 +62,7 @@ pub fn load_off_buf<B: BufRead, const BUFFER_SIZE: usize>(
             let line_start = get_line_start(data).ok_or(())?;
             data = &data[line_start..];
             if data.split_first_chunk::<3>().ok_or(())?.0 == b"OFF" {
-                let end = find_newline(&data[3..]).ok_or(())? + 4;
+                let end = data[3..].iter().position(|&v| v == b'\n').ok_or(())? + 4;
                 data = &data[end..];
             }
             let endword;
@@ -67,7 +71,7 @@ pub fn load_off_buf<B: BufRead, const BUFFER_SIZE: usize>(
             vertices.reserve(nv);
             indices.reserve(nv + nf - 2);
             line_number += 1;
-            let end = find_newline(data).ok_or(())? + 1;
+            let end = data.iter().position(|&v| v == b'\n').ok_or(())? + 1;
             data = &data[end..];
         }
 

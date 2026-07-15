@@ -37,57 +37,62 @@ fn parse_face_indices(
     let mut data = face_str;
     let mut off = 0;
 
-    off += data.iter().position(|&c| c != b' ')?;
-    data = &face_str[off..];
+    if data[0] == b' ' {
+        std::hint::cold_path();
+        off += data.iter().position(|&c| c != b' ')?;
+        data = &face_str[off..];
+    }
     let (f0, end) = parse_int(data, pos_sz)?;
     off += end;
     data = &face_str[off..];
     off += data.iter().position(|&c| c == b' ')? + 1;
     data = &face_str[off..];
-    off += data.iter().position(|&c| c != b' ')?;
-    data = &face_str[off..];
+    if data[0] == b' ' {
+        std::hint::cold_path();
+        off += data.iter().position(|&c| c != b' ')?;
+        data = &face_str[off..];
+    }
     let (f1, end) = parse_int(data, pos_sz)?;
     off += end;
     data = &face_str[off..];
     off += data.iter().position(|&c| c == b' ')? + 1;
     data = &face_str[off..];
-    off += data.iter().position(|&c| c != b' ')?;
+    if data[0] == b' ' {
+        std::hint::cold_path();
+        off += data.iter().position(|&c| c != b' ')?;
+        data = &face_str[off..];
+    }
+    let (f2, end) = parse_int(data, pos_sz)?;
+    off += end;
     data = &face_str[off..];
-    // let (f2, end) = parse_int(data, pos_sz).unwrap();
-    // off += end;
-    // let mut i = 3;
-    let mut i = 2;
+    off += data.iter().position(|&c| c == b' ' || c == b'\n')?;
+    data = &face_str[off..];
+    if data[0] == b' ' {
+        off += data[1..].iter().position(|&c| c != b' ')? + 1;
+        data = &face_str[off..];
+    }
+    let mut i = 3;
     indices.push(f0);
     indices.push(f1);
-    // indices.push(f3);
+    indices.push(f2);
 
-    while let Some((v_i, mut endword)) = parse_int(data, pos_sz) {
-        indices.push(v_i);
+    while data[0] != b'\n' {
+        let (f, end) = parse_int(data, pos_sz)?;
+        off += end;
+        data = &face_str[off..];
+        off += data.iter().position(|&c| c == b' ' || c == b'\n')?;
+        data = &face_str[off..];
+        if data[0] == b' ' {
+            off += data[1..].iter().position(|&c| c != b' ')? + 1;
+            data = &face_str[off..];
+        }
+        indices.push(f);
         i += 1;
-        if endword == data.len() {
-            break;
-        }
-        if data[endword] == b'/' {
-            match find_blank_or_newline(&data[(endword + 1)..]) {
-                Some(value) => endword += 1 + value,
-                None => break,
-            }
-        }
-
-        endword += data[endword..].iter().position(|&c| c != b' ')?;
-
-        off += endword;
-        if data[endword] == b'\r' || data[endword] == b'\n' {
-            off += data[endword..]
-                .iter()
-                .position(|&c| c != b' ' && c != b'\r')?;
-            break;
-        }
-        data = &data[endword..];
     }
 
-    if i >= 3 && *mode != FaceMode::Polygon {
+    if *mode != FaceMode::Polygon {
         if *mode == FaceMode::Undetermined {
+            std::hint::cold_path();
             if i == 3 {
                 *mode = FaceMode::Triangle;
             } else if i == 4 {
@@ -96,18 +101,20 @@ fn parse_face_indices(
                 *mode = FaceMode::Polygon;
             }
         } else if *mode == FaceMode::Triangle && i != 3 {
+            std::hint::cold_path();
             //add missing strides
             *strides = vec![3; (indices.len() - i) / 3];
             strides.reserve(2 * pos_sz as usize - strides.len());
             *mode = FaceMode::Polygon;
         } else if *mode == FaceMode::Quad && i != 4 {
+            std::hint::cold_path();
             //add missing strides
             *strides = vec![4; (indices.len() - i) / 4];
             *mode = FaceMode::Polygon;
             strides.reserve(2 * pos_sz as usize - strides.len());
         }
     }
-    if i >= 3 && *mode == FaceMode::Polygon {
+    if *mode == FaceMode::Polygon {
         strides.push(i as u8);
     }
     Some(off)
