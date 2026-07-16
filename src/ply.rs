@@ -1,8 +1,8 @@
 use std::{io::BufRead, str::FromStr};
 
 use crate::{
-    FaceMode, SurfaceIndices, find_blank_or_newline, into_chunks, parse_face_indices_list,
-    parse_uint,
+    FaceMode, SurfaceIndices, find_blank_or_newline, find_blank_space, find_newline, into_chunks,
+    parse_face_indices_list, parse_uint,
 };
 
 enum Format {
@@ -147,7 +147,7 @@ impl Type {
 
     fn skip_ascii(&self, data: &[u8]) -> Option<usize> {
         match self {
-            Type::Single(_) => data.iter().position(|&c| c == b' '),
+            Type::Single(_) => find_blank_space(data),
             Type::List(_, _) => {
                 let (n, mut i) = parse_uint(data)?;
                 for _ in 0..n {
@@ -619,7 +619,7 @@ fn parse_ascii(
                     }
                     vertices.push(res);
                     *line += 1;
-                    i += data[i..].iter().position(|&c| c == b'\n').ok_or(())? + 1;
+                    i += find_newline(&data[i..]).ok_or(())? + 1;
                     data = &data[i..];
                 }
             } else if (*line as u32) < u32::max(infos.vertex_start, infos.face_start) {

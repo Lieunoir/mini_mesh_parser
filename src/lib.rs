@@ -85,6 +85,22 @@ unsafe fn parse_float3(slice: &[u8]) -> (usize, [f32; 3]) {
     }
 }
 
+fn find_newline(slice: &[u8]) -> Option<usize> {
+    let (chunks, rem) = slice.as_chunks::<8>();
+    if let Some((i, word)) = chunks.iter().enumerate().find_map(|(i, &c)| {
+        let word = u64::from_le_bytes(c);
+        let word = word ^ 0x0A0A0A0A0A0A0A0A;
+        let word = word.wrapping_sub(0x0101010101010101) & !word & 0x8080808080808080;
+        if word != 0 { Some((i, word)) } else { None }
+    }) {
+        let off = word.trailing_zeros() / 8;
+        return Some(i * 8 + off as usize);
+    }
+    rem.iter()
+        .position(|&v| v == b'\n')
+        .map(|off| off + chunks.len() * 8)
+}
+
 fn find_blank_or_newline(slice: &[u8]) -> Option<usize> {
     let (chunks, rem) = slice.as_chunks::<8>();
     if let Some((i, word)) = chunks.iter().enumerate().find_map(|(i, &c)| {
