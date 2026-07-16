@@ -89,13 +89,8 @@ fn find_blank_or_newline(slice: &[u8]) -> Option<usize> {
     let (chunks, rem) = slice.as_chunks::<8>();
     if let Some((i, word)) = chunks.iter().enumerate().find_map(|(i, &c)| {
         let word = u64::from_le_bytes(c);
-        let word1 = word ^ 0x2020202020202020;
-        let word1 = word1.wrapping_sub(0x0101010101010101) & !word1 & 0x8080808080808080;
-        let word2 = word ^ 0x0A0A0A0A0A0A0A0A;
-        let word2 = word2.wrapping_sub(0x0101010101010101) & !word2 & 0x8080808080808080;
-        let word3 = word ^ 0x0D0D0D0D0D0D0D0D;
-        let word3 = word3.wrapping_sub(0x0101010101010101) & !word3 & 0x8080808080808080;
-        let word = word1 | word2 | word3;
+        // From : https://graphics.stanford.edu/~seander/bithacks.html#HasLessInWord
+        let word = (word.wrapping_sub(!0u64 / 255 * b'!' as u64)) & !word & 0x8080808080808080;
         if word != 0 { Some((i, word)) } else { None }
     }) {
         let off = word.trailing_zeros() / 8;
