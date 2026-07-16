@@ -145,16 +145,123 @@ fn parse_u8(data: &mut &[u8]) -> Option<u8> {
 }
 
 fn parse_uint(data: &[u8]) -> Option<(u32, usize)> {
-    data.first().map(|&first_b| {
+    let (chunks, rem) = data.as_chunks::<8>();
+    for &c in chunks {
+        let word = u64::from_le_bytes(c);
+        let mask = ((word) + !0u64 / 255 * (127 - (b'/' as u64)) | (word)) & !0u64 / 255 * 128;
+        let sep_mask = mask ^ 0x8080808080808080;
+        let sep_mask = mask & (sep_mask >> 8);
+        if sep_mask != 0 {
+            let to_shift = sep_mask.trailing_zeros() + 1;
+            let num_word = word & 0x0f0f0f0f0f0f0f0f;
+            let num_word = num_word << 64 - to_shift;
+
+            let mask: u64 = 0x000000FF000000FF;
+            let mul1: u64 = 0x000F424000000064; // 100 + (1000000ULL << 32)
+            let mul2: u64 = 0x0000271000000001; // 1 + (10000ULL << 32)
+            let num = (num_word * 10) + (num_word >> 8); // num_word = (num_word * 2561) >> 8;
+            let num = (num & mask).wrapping_mul(mul1) + ((num >> 16) & mask).wrapping_mul(mul2);
+            let num_bytes = num.to_le_bytes();
+            let num = u32::from_le_bytes(*num_bytes.last_chunk().unwrap());
+            return Some((num, (to_shift / 8) as usize));
+            //println!("{} {num}", to_shift / 8 - 1);
+        }
+    }
+    rem.first().map(|&first_b| {
         let first_b = if first_b == b'+' { 0 } else { first_b & 0x0f };
-        let (i, acc) = data[1..]
+        let (i, acc) = rem[1..]
             .iter()
             .take_while(|&val| val.is_ascii_digit())
             .fold((0, first_b as u32), |(i, acc), &val| {
                 (i + 1, acc * 10 + (val - b'0') as u32)
             });
-        (acc, i + 1)
+        (acc, chunks.len() * 8 + i + 1)
     })
+}
+
+fn parse_uints(data: &[u8], n: u32, indices: &mut Vec<u32>) -> Option<usize> {
+    let (chunks, rem) = data.as_chunks::<8>();
+    let mut cur_n = 0;
+    let mut rem_word = 0;
+    let mut rem_word_size = 0;
+    let mut has_rem = false;
+    for (i, &c) in chunks.iter().enumerate() {
+        let word = u64::from_le_bytes(c);
+        let digit_mask =
+            ((word) + !0u64 / 255 * (127 - (b'/' as u64)) | (word)) & !0u64 / 255 * 128;
+        let sep_mask = digit_mask ^ 0x8080808080808080;
+        let mut start_mask = (sep_mask << 8) & digit_mask;
+        let mut end_mask = (digit_mask << 8 | (has_rem as u64) << 7) & sep_mask;
+        let digit_mask = (sep_mask << 1).wrapping_sub(sep_mask >> 7);
+        let mut clean_previous_shift = 0;
+        has_rem = end_mask < start_mask;
+
+        let num_word = word & 0x0f0f0f0f0f0f0f0f & digit_mask;
+        let mask = 0x000000FF000000FF;
+        let mul1 = 0x000F424000000064; // 100 + (1000000ULL << 32)
+        let mul2 = 0x0000271000000001; // 1 + (10000ULL << 32)
+        let num_word = (num_word * 10) + (num_word >> 8); // num_word = (num_word * 2561) >> 8;
+        let mut to_shift = end_mask.trailing_zeros() - 7;
+        while end_mask != 0 && cur_n < n {
+            let num = (num_word >> (clean_previous_shift))
+                .unbounded_shl(64 - (to_shift - clean_previous_shift + rem_word_size));
+
+            let num = num | rem_word;
+            let num = ((num & mask).wrapping_mul(mul1)) + (((num >> 16) & mask).wrapping_mul(mul2));
+            let num_bytes = num.to_le_bytes();
+            let num = u32::from_le_bytes(*num_bytes.last_chunk().unwrap());
+            //return Some((num, (to_shift / 8) as usize));
+            clean_previous_shift = start_mask.trailing_zeros() - 7;
+            end_mask = end_mask & (end_mask - 1);
+            start_mask = start_mask & (start_mask.wrapping_sub(1)); //Will overflow on last step, not important
+            cur_n += 1;
+            indices.push(num);
+            rem_word = 0;
+            rem_word_size = 0;
+            if end_mask != 0 && cur_n != n {
+                to_shift = end_mask.trailing_zeros() - 7;
+            }
+        }
+        if cur_n == n {
+            return Some(i * 8 + (to_shift / 8) as usize);
+        }
+
+        if has_rem {
+            rem_word = num_word >> clean_previous_shift;
+            rem_word_size = 64 - clean_previous_shift;
+        }
+    }
+    let mut i = 0;
+    let mut rem_val = if rem_word != 0 {
+        let num = rem_word << (64 - rem_word_size);
+        let mask = 0x000000FF000000FF;
+        let mul1 = 0x000F424000000064; // 100 + (1000000ULL << 32)
+        let mul2 = 0x0000271000000001; // 1 + (10000ULL << 32)
+        let num = ((num & mask).wrapping_mul(mul1)) + (((num >> 16) & mask).wrapping_mul(mul2));
+        let num_bytes = num.to_le_bytes();
+        u32::from_le_bytes(*num_bytes.last_chunk().unwrap())
+    } else {
+        0
+    };
+
+    while cur_n < n {
+        let mut acc = rem_val;
+        rem_val = 0;
+        while i < rem.len() && rem[i].is_ascii_digit() {
+            acc = acc * 10 + (rem[i] - b'0') as u32;
+            i += 1;
+        }
+        indices.push(acc);
+        cur_n += 1;
+        if cur_n != n {
+            i += rem.get(i + 1..)?.iter().position(|&c| c.is_ascii_digit())? + 1;
+        }
+    }
+    if cur_n == n {
+        Some(chunks.len() * 8 + i)
+    } else {
+        None
+    }
 }
 
 fn parse_face_indices_list(
@@ -209,64 +316,7 @@ fn parse_face_indices_list(
         }
     }
 
-    let (v, endword) = match parse_uint(data) {
-        Some(v) => v,
-        None => {
-            std::hint::cold_path();
-            return None;
-        }
-    };
-    *data = data.get(endword + 1..)?;
-    indices.push(v);
-
-    if *data.get(0)? == b' ' {
-        std::hint::cold_path();
-        *data = &data[1..];
-        while !data.is_empty() && data[0] == b' ' {
-            *data = &data[1..];
-        }
-    }
-
-    let (v, endword) = match parse_uint(data) {
-        Some(v) => v,
-        None => {
-            std::hint::cold_path();
-            return None;
-        }
-    };
-    *data = data.get(endword + 1..)?;
-    indices.push(v);
-
-    if *data.get(0)? == b' ' {
-        std::hint::cold_path();
-        *data = &data[1..];
-        while !data.is_empty() && data[0] == b' ' {
-            *data = &data[1..];
-        }
-    }
-
-    for _ in 0..face_len - 3 {
-        let (v, endword) = parse_uint(data)?;
-        *data = &data.get(endword + 1..)?;
-        indices.push(v);
-
-        if *data.get(0)? == b' ' {
-            std::hint::cold_path();
-            *data = &data[1..];
-            while !data.is_empty() && data[0] == b' ' {
-                *data = &data[1..];
-            }
-        }
-    }
-
-    let (v, endword) = match parse_uint(data) {
-        Some(v) => v,
-        None => {
-            std::hint::cold_path();
-            return None;
-        }
-    };
-    indices.push(v);
+    let endword = parse_uints(data, face_len as u32, indices)?;
     *data = data.get(endword..)?;
     let off = match data.get(0)? {
         b'\r' => 2,
