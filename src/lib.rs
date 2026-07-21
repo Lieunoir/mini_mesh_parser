@@ -182,8 +182,8 @@ fn parse_uint(data: &[u8]) -> Option<(u32, usize)> {
 const TABLE_LEN: usize = 8;
 
 // https://jk-jeon.github.io/posts/2023/08/optimal-bounds-integer-division/
-const MUL_SHIFT_FOR_DIV_10_POW_N: [(u64, u8); TABLE_LEN] = {
-    let mut res = [(1, 0); TABLE_LEN];
+const MUL_SHIFT_FOR_DIV_10_POW_N: [(u32, u64, u8); TABLE_LEN] = {
+    let mut res = [(1, 1, 0); TABLE_LEN];
     let mut i = 1;
     while i < TABLE_LEN {
         let divisor = 10u32.pow(i as u32);
@@ -205,7 +205,7 @@ const MUL_SHIFT_FOR_DIV_10_POW_N: [(u64, u8); TABLE_LEN] = {
             overflowing_rhs = ((1u64 << k) as u128 * rhs_num) / v;
             assert!(overflowing_rhs < u64::MAX as u128);
         }
-        res[i] = (((1u64 << k) / divisor as u64 + 1), k);
+        res[i] = (divisor, ((1u64 << k) / divisor as u64 + 1), k);
         i += 1;
     }
     res
@@ -269,9 +269,9 @@ fn parse_uints(data: &[u8], mut n: u32, indices: &mut Vec<u32>) -> Option<usize>
                 let off = 7 - num_digit;
                 let num_rem = num_rem.take().unwrap_or(0) * TEN_POW_N[num_digit as usize + 1];
 
-                let (to_mul, to_shift) = MUL_SHIFT_FOR_DIV_10_POW_N[off as usize];
+                let (divisor, to_mul, to_shift) = MUL_SHIFT_FOR_DIV_10_POW_N[off as usize];
                 let quo = (((num as u64).wrapping_mul(to_mul as u64)) >> to_shift) as u32;
-                let rem = num - quo * TEN_POW_N[off as usize];
+                let rem = num - quo * divisor;
                 indices.push(quo + num_rem);
                 num = rem;
                 n -= 1;
@@ -282,9 +282,11 @@ fn parse_uints(data: &[u8], mut n: u32, indices: &mut Vec<u32>) -> Option<usize>
             }
         }
 
-        if has_rem {
-            num_rem = Some(num + num_rem.unwrap_or(0) * 10u32.pow(8));
-        }
+        num_rem = if has_rem {
+            Some(num + num_rem.unwrap_or(0) * 10u32.pow(8))
+        } else {
+            None
+        };
     }
 
     std::hint::cold_path();
