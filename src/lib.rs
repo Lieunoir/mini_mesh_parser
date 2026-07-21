@@ -148,7 +148,7 @@ fn parse_uint(data: &[u8]) -> Option<(u32, usize)> {
     let (chunks, rem) = data.as_chunks::<8>();
     for &c in chunks {
         let word = u64::from_le_bytes(c);
-        let mask = ((word) + !0u64 / 255 * (127 - (b'/' as u64)) | (word)) & !0u64 / 255 * 128;
+        let mask = ((word) + !0u64 / 255 * (127 - (b'/' as u64)) | word) & !0u64 / 255 * 128;
         let sep_mask = mask ^ 0x8080808080808080;
         let sep_mask = mask & (sep_mask >> 8);
         if sep_mask != 0 {
@@ -205,7 +205,7 @@ const MUL_SHIFT_FOR_DIV_10_POW_N: [(u64, u8); TABLE_LEN] = {
             overflowing_rhs = ((1u64 << k) as u128 * rhs_num) / v;
             assert!(overflowing_rhs < u64::MAX as u128);
         }
-        res[i] = ((1u64 << k) / divisor as u64 + 1, k);
+        res[i] = (((1u64 << k) / divisor as u64 + 1), k);
         i += 1;
     }
     res
@@ -228,85 +228,80 @@ fn extract_masked_msb_per_byte(w: u64) -> u8 {
     (w.wrapping_mul(sum_of_shifts) >> 56) as u8
 }
 
-fn parse_uints(data: &[u8], n: u32, indices: &mut Vec<u32>) -> Option<usize> {
+fn parse_uints(data: &[u8], mut n: u32, indices: &mut Vec<u32>) -> Option<usize> {
     let (chunks, rem) = data.as_chunks::<8>();
-    let mut cur_n = 0;
     let mut num_rem = None;
     for (i, &c) in chunks.iter().enumerate() {
         let word = u64::from_le_bytes(c);
-        let digit_mask =
-            ((word) + !0u64 / 255 * (127 - (b'/' as u64)) | (word)) & !0u64 / 255 * 128;
-        let full_mask = (digit_mask << 1).wrapping_sub(digit_mask >> 7);
+        let digit_mask = ((word) + !0u64 / 255 * (127 - (b'/' as u64)) | word) & !0u64 / 255 * 128;
+        //let full_mask = (digit_mask << 1).wrapping_sub(digit_mask >> 7);
+        //Make mask go to the 4 lsb instead of full bits, avoid ascii number bit masking after
+        let ascii_and_digit_mask = (digit_mask >> 3) - (digit_mask >> 7);
         let digit_mask = extract_masked_msb_per_byte(digit_mask);
         let mut num_ends = digit_mask & !digit_mask >> 1;
         let has_rem = (digit_mask & 0x80) != 0;
         //store remainder now
-        let num_word = word & 0x0f0f0f0f0f0f0f0f & full_mask;
+        let num_word = word & ascii_and_digit_mask;
         let mask = 0x000000ff000000ff;
         let mul1 = 0x000f424000000064; // 100 + (1000000ull << 32)
         let mul2 = 0x0000271000000001; // 1 + (10000ull << 32)
         let num = (num_word * 10) + (num_word >> 8); // num_word = (num_word * 2561) >> 8;
-        let num = ((num & mask).wrapping_mul(mul1)) + (((num >> 16) & mask).wrapping_mul(mul2));
-        let num_bytes = num.to_le_bytes();
-        let mut num = u32::from_le_bytes(*num_bytes.last_chunk().unwrap());
-        // trim digit
-        // use digit inverse
+        let mut num = ((((num & mask).wrapping_mul(mul1))
+            + (((num >> 16) & mask).wrapping_mul(mul2)))
+            >> 32) as u32;
 
         //handle carry and no new number edge_case
         if (digit_mask & 1 == 0)
             && let Some(val) = num_rem.take()
         {
             indices.push(val);
-            cur_n += 1;
+            n -= 1;
 
-            if cur_n == n {
+            if n == 0 {
                 return Some(i * 8);
             }
         }
 
-        while num_ends != 0 {
-            let num_digit = num_ends.trailing_zeros() + 1;
-            num_ends &= num_ends - 1;
-            let off = 8 - num_digit;
-            // let num_rem = if let Some(val) = num_rem.take() {
-            // val * TEN_POW_N[num_digit as usize]
-            // } else {
-            // 0
-            // };
-            let num_rem = num_rem.take().unwrap_or(0) * TEN_POW_N[num_digit as usize];
+        for _ in 0..4 {
+            if num_ends != 0 {
+                let num_digit = num_ends.trailing_zeros();
+                num_ends &= num_ends - 1;
+                let off = 7 - num_digit;
+                let num_rem = num_rem.take().unwrap_or(0) * TEN_POW_N[num_digit as usize + 1];
 
-            let (to_mul, to_shift) = MUL_SHIFT_FOR_DIV_10_POW_N[off as usize];
-            let quo = (((num as u64).wrapping_mul(to_mul)) >> to_shift) as u32;
-            let rem = num - quo * TEN_POW_N[off as usize];
-            indices.push(quo + num_rem);
-            num = rem;
-            cur_n += 1;
+                let (to_mul, to_shift) = MUL_SHIFT_FOR_DIV_10_POW_N[off as usize];
+                let quo = (((num as u64).wrapping_mul(to_mul as u64)) >> to_shift) as u32;
+                let rem = num - quo * TEN_POW_N[off as usize];
+                indices.push(quo + num_rem);
+                num = rem;
+                n -= 1;
 
-            if cur_n == n {
-                return Some(i * 8 + (8 - off) as usize);
+                if n == 0 {
+                    return Some(i * 8 + 1 + num_digit as usize);
+                }
             }
         }
 
         if has_rem {
-            num_rem = Some(num);
+            num_rem = Some(num + num_rem.unwrap_or(0) * 10u32.pow(8));
         }
     }
 
     std::hint::cold_path();
     let mut i = 0;
-    while cur_n < n {
+    while n > 0 {
         let mut acc = num_rem.unwrap_or(0);
         while i < rem.len() && rem[i].is_ascii_digit() {
             acc = acc * 10 + (rem[i] - b'0') as u32;
             i += 1;
         }
         indices.push(acc);
-        cur_n += 1;
-        if cur_n != n {
+        n -= 1;
+        if n > 0 {
             i += rem.get(i + 1..)?.iter().position(|&c| c.is_ascii_digit())? + 1;
         }
     }
-    if cur_n == n {
+    if n == 0 {
         Some(chunks.len() * 8 + i)
     } else {
         None
