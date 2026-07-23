@@ -182,30 +182,15 @@ fn parse_uint(data: &[u8]) -> Option<(u32, usize)> {
 const TABLE_LEN: usize = 8;
 
 // https://jk-jeon.github.io/posts/2023/08/optimal-bounds-integer-division/
-const MUL_SHIFT_FOR_DIV_10_POW_N: [(u32, u64, u8); TABLE_LEN] = {
-    let mut res = [(1, 1, 0); TABLE_LEN];
+// https://en.algorithmica.org/hpc/arithmetic/division/#lemire-reduction
+const MUL_FOR_DIV_10_POW_N: [(u64, u64); TABLE_LEN] = {
+    let mut res = [(1, 1); TABLE_LEN];
     let mut i = 1;
     while i < TABLE_LEN {
-        let divisor = 10u32.pow(i as u32);
+        let divisor = 10u64.pow(i as u32);
         // rhs_num = (v + 1) / divisor
-        let (v, rhs_num) = if (u32::MAX - (u32::MAX / divisor) * divisor) == divisor - 1 {
-            ((u32::MAX / divisor) * divisor - 1, u32::MAX / divisor)
-        } else {
-            (
-                (u32::MAX / divisor) * divisor - divisor - 1,
-                u32::MAX / divisor - 1,
-            )
-        };
-        let v = v as u128;
-        let rhs_num = rhs_num as u128;
-        let mut k = 0u8;
-        let mut overflowing_rhs = ((1u64 << k) as u128 * rhs_num) / v;
-        while overflowing_rhs as u64 - (1 << k) / divisor as u64 == 0 {
-            k += 1;
-            overflowing_rhs = ((1u64 << k) as u128 * rhs_num) / v;
-            assert!(overflowing_rhs < u64::MAX as u128);
-        }
-        res[i] = (divisor, ((1u64 << k) / divisor as u64 + 1), k);
+        let div_helper = (!0u64) / divisor + 1;
+        res[i] = (divisor, div_helper);
         i += 1;
     }
     res
@@ -263,9 +248,10 @@ fn parse_uints(data: &[u8], mut n: u32, indices: &mut Vec<u32>) -> Option<usize>
                 let off = 7 - num_digit;
                 let num_rem = num_rem.take().unwrap_or(0) * TEN_POW_N[num_digit as usize + 1];
 
-                let (divisor, to_mul, to_shift) = MUL_SHIFT_FOR_DIV_10_POW_N[off as usize];
-                let quo = (((num as u64).wrapping_mul(to_mul as u64)) >> to_shift) as u32;
-                let rem = num - quo * divisor;
+                let (divisor, to_mul) = MUL_FOR_DIV_10_POW_N[off as usize];
+                let (low, high) = (num as u64).carrying_mul(to_mul, 0);
+                let quo = high as u32;
+                let rem = low.carrying_mul(divisor as u64, 0).1 as u32;
                 indices.push(quo + num_rem);
                 num = rem;
                 n -= 1;
