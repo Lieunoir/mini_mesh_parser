@@ -223,11 +223,6 @@ const TEN_POW_N: [u32; TABLE_LEN] = {
     res
 };
 
-fn extract_masked_msb_per_byte(w: u64) -> u8 {
-    let sum_of_shifts = 0x0002040810204081;
-    (w.wrapping_mul(sum_of_shifts) >> 56) as u8
-}
-
 fn parse_uints(data: &[u8], mut n: u32, indices: &mut Vec<u32>) -> Option<usize> {
     let (chunks, rem) = data.as_chunks::<8>();
     let mut num_rem = None;
@@ -236,12 +231,11 @@ fn parse_uints(data: &[u8], mut n: u32, indices: &mut Vec<u32>) -> Option<usize>
         let digit_mask = ((word) + !0u64 / 255 * (127 - (b'/' as u64)) | word) & !0u64 / 255 * 128;
         //let full_mask = (digit_mask << 1).wrapping_sub(digit_mask >> 7);
         //Make mask go to the 4 lsb instead of full bits, avoid ascii number bit masking after
-        let ascii_and_digit_mask = (digit_mask >> 3) - (digit_mask >> 7);
-        let digit_mask = extract_masked_msb_per_byte(digit_mask);
-        let mut num_ends = digit_mask & !digit_mask >> 1;
-        let has_rem = (digit_mask & 0x80) != 0;
+        let mut num_ends = digit_mask & !digit_mask >> 8;
+        let digit_mask = (digit_mask >> 3) - (digit_mask >> 7);
+        let has_rem = (digit_mask >> 56) != 0;
         //store remainder now
-        let num_word = word & ascii_and_digit_mask;
+        let num_word = word & digit_mask;
         let mask = 0x000000ff000000ff;
         let mul1 = 0x000f424000000064; // 100 + (1000000ull << 32)
         let mul2 = 0x0000271000000001; // 1 + (10000ull << 32)
@@ -264,7 +258,7 @@ fn parse_uints(data: &[u8], mut n: u32, indices: &mut Vec<u32>) -> Option<usize>
 
         for _ in 0..4 {
             if num_ends != 0 {
-                let num_digit = num_ends.trailing_zeros();
+                let num_digit = num_ends.trailing_zeros() / 8;
                 num_ends &= num_ends - 1;
                 let off = 7 - num_digit;
                 let num_rem = num_rem.take().unwrap_or(0) * TEN_POW_N[num_digit as usize + 1];
@@ -279,6 +273,8 @@ fn parse_uints(data: &[u8], mut n: u32, indices: &mut Vec<u32>) -> Option<usize>
                 if n == 0 {
                     return Some(i * 8 + 1 + num_digit as usize);
                 }
+            } else {
+                break;
             }
         }
 
